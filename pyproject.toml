@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "verity"
+name = "verity-sdk"
 version = "0.1.0"
 description = "Proof-chain registry for AI agents — backed by Walrus for persistent, portable, verifiable memory"
 readme = "README.md"

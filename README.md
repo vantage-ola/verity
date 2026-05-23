@@ -32,13 +32,13 @@ Built for the **Sui Overflow hackathon, Walrus track**.
 ## Install
 
 ```bash
-pip install verity
+pip install verity-sdk
 ```
 
 With MemWal support:
 
 ```bash
-pip install "verity[memwal]"
+pip install "verity-sdk[memwal]"
 ```
 
 Development install:
@@ -343,7 +343,7 @@ s = VeritySession("verity.json", backend=backend)
 ### Install
 
 ```bash
-pip install "verity[memwal]"
+pip install "verity-sdk[memwal]"
 # or:
 pip install memwal
 ```
