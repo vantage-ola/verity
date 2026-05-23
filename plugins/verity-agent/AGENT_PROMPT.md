@@ -9,7 +9,7 @@ verity tracks five entity types — Feature, Claim, Test, Evidence, Release — 
 ## Install
 
 ```
-pip install verity-sdk
+pip install walrus-verity
 ```
 
 ## CLI

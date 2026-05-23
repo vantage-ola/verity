@@ -133,7 +133,7 @@ GitHub auto-generates release notes from PR titles merged since the last tag. To
 After the workflow completes:
 
 ```bash
-pip install verity-sdk==0.2.0
+pip install walrus-verity==0.2.0
 python -c "import verity; print(verity.__version__)"
 ```
 
@@ -152,7 +152,7 @@ pip install twine
 twine yank verity 0.2.0 --reason "Breaking regression in push()"
 ```
 
-A yanked release is hidden from `pip install verity-sdk` but still accessible via `pip install verity-sdk==0.2.0 --no-index` by users who pin it. It is not deleted.
+A yanked release is hidden from `pip install walrus-verity` but still accessible via `pip install walrus-verity==0.2.0 --no-index` by users who pin it. It is not deleted.
 
 ---
 

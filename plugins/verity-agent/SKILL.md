@@ -23,9 +23,9 @@ Proof chains are persisted to **Walrus** (content-addressed blob storage on Sui)
 ## Install
 
 ```bash
-pip install verity-sdk
+pip install walrus-verity
 # or with MemWal support
-pip install "verity-sdk[memwal]"
+pip install "walrus-verity[memwal]"
 ```
 
 ---
