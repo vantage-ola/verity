@@ -13,10 +13,12 @@ def load_registry(path: Path) -> Registry:
     return Registry.model_validate(data)
 
 
+def canonical_json(registry: Registry) -> str:
+    return json.dumps(registry.model_dump(), sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False)
+
+
 def save_registry(registry: Registry, path: Path) -> None:
-    data = registry.model_dump()
-    canonical = json.dumps(data, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False)
-    path.write_text(canonical, encoding="utf-8")
+    path.write_text(canonical_json(registry), encoding="utf-8")
 
 
 def registry_path(directory: Path = Path(".")) -> Path:

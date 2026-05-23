@@ -1,18 +1,24 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Annotated
 
 import typer
 
-from verity.models import Claim, Evidence, Feature, Registry, Test
-from verity.registry import load_registry, registry_path, save_registry
+from verity.backends import StorageBackend
+from verity.memwal import MemWalBackend, MemWalError
+from verity.models import Claim, Evidence, Feature, PushRecord, Registry, Test
+from verity.registry import canonical_json, load_registry, registry_path, save_registry
 from verity.release import VerityReleaseError, create_release
 from verity.validate import validate
+from verity.walrus import WalrusBackend, WalrusError
 
 app = typer.Typer(help="verity — proof-chain registry for AI agents")
 add_app = typer.Typer(help="Add an entity to the registry")
 app.add_typer(add_app, name="add")
+
+BackendChoice = Annotated[str, typer.Option("--backend", "-b", help="Storage backend: walrus or memwal")]
 
 
 def _load(directory: Path = Path(".")) -> tuple[Path, Registry]:
@@ -31,6 +37,16 @@ def _save_validated(path: Path, registry: Registry) -> None:
         typer.echo("Registry has validation errors — not saved.", err=True)
         raise typer.Exit(1)
     save_registry(registry, path)
+
+
+def _get_backend(backend_name: str, epochs: int = 5) -> StorageBackend:
+    if backend_name == "memwal":
+        try:
+            return MemWalBackend()
+        except MemWalError as e:
+            typer.echo(f"MemWal config error: {e}", err=True)
+            raise typer.Exit(1)
+    return WalrusBackend(epochs=epochs)
 
 
 @app.command()
@@ -136,3 +152,74 @@ def release(
     save_registry(registry, path)
     typer.echo(f"Released {rel.id} at {rel.timestamp}")
     typer.echo(f"  claims: {', '.join(rel.claim_ids)}")
+
+
+@app.command("push")
+def push_cmd(
+    epochs: Annotated[int, typer.Option("--epochs", help="Walrus storage epochs")] = 5,
+    backend_name: BackendChoice = "walrus",
+) -> None:
+    """Upload registry to Walrus (or MemWal); print blob ID and record it locally."""
+    path, registry = _load()
+    errors = validate(registry)
+    if errors:
+        for e in errors:
+            typer.echo(f"  error: {e}", err=True)
+        typer.echo("Fix validation errors before pushing.", err=True)
+        raise typer.Exit(1)
+
+    backend = _get_backend(backend_name, epochs=epochs)
+    content = canonical_json(registry).encode("utf-8")
+
+    try:
+        blob_id = backend.store(content)
+    except (WalrusError, MemWalError) as e:
+        typer.echo(f"Push failed: {e}", err=True)
+        raise typer.Exit(1)
+
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    registry.pushes.append(PushRecord(blob_id=blob_id, timestamp=timestamp, backend=backend_name))  # type: ignore[arg-type]
+    if registry.releases:
+        registry.releases[-1].walrus_blob_id = blob_id
+    save_registry(registry, path)
+
+    typer.echo(f"blob: {blob_id}")
+
+
+@app.command("pull")
+def pull_cmd(
+    blob_id: Annotated[str, typer.Argument(help="Walrus blob ID")],
+    directory: Annotated[Path, typer.Option("--dir", help="Target directory")] = Path("."),
+    backend_name: BackendChoice = "walrus",
+) -> None:
+    """Fetch a registry from Walrus (or MemWal) and write it to verity.json."""
+    backend = _get_backend(backend_name)
+
+    try:
+        content = backend.fetch(blob_id)
+    except (WalrusError, MemWalError) as e:
+        typer.echo(f"Pull failed: {e}", err=True)
+        raise typer.Exit(1)
+
+    import json
+
+    registry = Registry.model_validate(json.loads(content))
+    path = registry_path(directory)
+    save_registry(registry, path)
+    typer.echo(f"Restored registry from {blob_id}")
+    typer.echo(
+        f"  {len(registry.features)} feature(s), "
+        f"{len(registry.claims)} claim(s), "
+        f"{len(registry.releases)} release(s)"
+    )
+
+
+@app.command("log")
+def log_cmd() -> None:
+    """List all push history for this registry."""
+    _, registry = _load()
+    if not registry.pushes:
+        typer.echo("No pushes recorded yet.")
+        return
+    for i, record in enumerate(registry.pushes, 1):
+        typer.echo(f"{i:3}.  [{record.backend}]  {record.timestamp}  {record.blob_id}")

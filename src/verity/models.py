@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class Feature(BaseModel):
@@ -88,6 +88,14 @@ class Release(BaseModel):
         return v
 
 
+class PushRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    blob_id: str
+    timestamp: str
+    backend: Literal["walrus", "memwal"] = "walrus"
+
+
 class Registry(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -98,3 +106,4 @@ class Registry(BaseModel):
     tests: list[Test] = []
     evidence: list[Evidence] = []
     releases: list[Release] = []
+    pushes: list[PushRecord] = []
