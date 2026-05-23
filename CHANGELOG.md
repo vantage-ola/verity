@@ -11,6 +11,27 @@ This project uses [semantic versioning](https://semver.org/).
 
 ---
 
+## [0.1.1] — 2026-05-23
+
+### Changed
+- Renamed PyPI distribution from `verity` → `verity-sdk` → `walrus-verity`
+- Moved detailed documentation out of `README.md` into `docs/` folder
+- `README.md` is now a concise overview with links to docs pages
+- Added acknowledgement of [ssot-registry](https://github.com/vantage-ola/ssot-registry) (Apache 2.0) as the conceptual origin of the proof-chain model
+
+### Added
+- `docs/cli.md` — full CLI reference
+- `docs/python-api.md` — Python API and custom backend guide
+- `docs/schema.md` — `verity.json` schema, ID prefixes, status values, validation and release rules
+- `docs/walrus.md` — Walrus testnet, mainnet, and epoch setup
+- `docs/memwal.md` — MemWal env vars, delegate keys, how store/fetch works
+- `docs/multi-agent.md` — handoff pattern, audit trail, dry-run examples
+- `plugins/verity-agent/SKILL.md` — LLM-agnostic agent skill for using verity in any project
+- `plugins/verity-agent/AGENT_PROMPT.md` — compact system-prompt-friendly version
+- `PUBLISHING.md` — semantic versioning guide, PyPI trusted publishing setup, full release process
+
+---
+
 ## [0.1.0] — 2025-05-23
 
 Initial release. Full Phase 1–3 implementation.
@@ -87,5 +108,6 @@ Initial release. Full Phase 1–3 implementation.
 
 ---
 
-[Unreleased]: https://github.com/vantage-ola/verity/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/vantage-ola/verity/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/vantage-ola/verity/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/vantage-ola/verity/releases/tag/v0.1.0
