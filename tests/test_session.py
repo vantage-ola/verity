@@ -120,7 +120,6 @@ def test_push_updates_latest_release(tmp_path: Path) -> None:
 
 
 def test_pull_with_mock_backend(tmp_session: VeritySession) -> None:
-    import json
 
     from verity.registry import canonical_json
 

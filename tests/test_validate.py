@@ -1,5 +1,3 @@
-import pytest
-
 from verity.models import Claim, Evidence, Feature, Registry, Test
 from verity.validate import validate
 
