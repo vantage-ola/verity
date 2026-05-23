@@ -683,7 +683,7 @@ requires-dist = [
     { name = "memwal", marker = "extra == 'memwal'", specifier = ">=0.1.0" },
     { name = "pydantic", specifier = ">=2.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
-    { name = "pytest-cov", marker = "extra == 'dev'" },
+    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0" },
     { name = "typer", specifier = ">=0.12" },
 ]
 provides-extras = ["memwal", "dev"]
