@@ -146,3 +146,46 @@ verity log [--dir DIRECTORY]
 # 1.  [walrus]  2025-01-15T10:30:00Z  AbCdEfGhIjKlMnOpQrStUvWxYz…
 # 2.  [walrus]  2025-01-16T09:15:00Z  XyZaBcDeFgHiJkLmNoPqRsTuVw…
 ```
+
+---
+
+## `verity site`
+
+Generate a human-readable HTML proof page from `verity.json`. Shows every feature, claim, test, evidence entry, release, and push in a clean browseable page.
+
+```bash
+verity site [--dir DIRECTORY] [--output PATH] [--push] [--epochs N]
+```
+
+| Option | Default | Description |
+|---|---|---|
+| `--dir` | `.` | Directory containing `verity.json` |
+| `--output` | — | Save HTML to a local file |
+| `--push` | `false` | Upload HTML to Walrus and print the blob ID and viewer URL |
+| `--epochs` | `5` | Walrus storage duration (only used with `--push`) |
+
+**Save locally:**
+```bash
+verity site --output proof.html
+# Saved to proof.html
+```
+
+**Push to Walrus and get a public URL:**
+```bash
+verity site --push
+# blob: AbCdEfGhIjKlMnOpQrStUvWxYz…
+# url:  https://aggregator.walrus-testnet.walrus.space/v1/blobs/AbCdEfGh…
+```
+
+**Save and push:**
+```bash
+verity site --output proof.html --push
+```
+
+**Print HTML to stdout** (no flags):
+```bash
+verity site
+# <!DOCTYPE html>…
+```
+
+The URL format depends on whether you're using testnet or mainnet — it reads `WALRUS_AGGREGATOR_URL` from the environment (same env var used by `verity push`).

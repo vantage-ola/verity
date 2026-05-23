@@ -3,6 +3,7 @@
 **A proof-chain registry for AI agents — backed by Walrus for persistent, portable, verifiable memory.**
 
 [![CI](https://github.com/vantage-ola/verity/actions/workflows/ci.yml/badge.svg)](https://github.com/vantage-ola/verity/actions/workflows/ci.yml)
+[![Coverage](https://codecov.io/gh/vantage-ola/verity/branch/main/graph/badge.svg)](https://codecov.io/gh/vantage-ola/verity)
 [![PyPI version](https://badge.fury.io/py/walrus-verity.svg)](https://badge.fury.io/py/walrus-verity)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -56,18 +57,34 @@ verity push              # → blob: AbCdEfGh…
 verity pull AbCdEfGh…
 ```
 
+```
+$ verity validate
+OK
+
+$ verity release 1.0.0
+Released rel:1.0.0 at 2026-05-23T19:08:25Z
+  claims: clm:auth.t1
+
+$ verity push
+blob: AbCdEfGhIjKlMnOpQrStUvWxYz0123456789
+
+$ verity log
+  1.  [walrus]  2026-05-23T19:08:25Z  AbCdEfGhIjKlMnOpQrStUvWxYz0123456789
+```
+
 ---
 
 ## Documentation
 
 | Topic | |
 |---|---|
-| [CLI Reference](docs/cli.md) | All commands: `init`, `add`, `validate`, `release`, `push`, `pull`, `log` |
+| [CLI Reference](docs/cli.md) | All commands: `init`, `add`, `validate`, `release`, `push`, `pull`, `log`, `site` |
 | [Python API](docs/python-api.md) | `VeritySession`, low-level functions, custom backends |
 | [Schema Reference](docs/schema.md) | `verity.json` fields, ID prefixes, status values, validation rules |
 | [Walrus Setup](docs/walrus.md) | Testnet, mainnet, custom endpoints |
 | [MemWal Setup](docs/memwal.md) | Env vars, delegate keys, namespace isolation |
 | [Multi-Agent Patterns](docs/multi-agent.md) | Handoff pattern, audit trail, dry-run |
+| [Scripts](docs/scripts.md) | `store_project_context.py` — seed MemWal with verity project knowledge |
 
 ---
 

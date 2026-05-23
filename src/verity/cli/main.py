@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Annotated
@@ -12,6 +13,7 @@ from verity.memwal import MemWalBackend, MemWalError
 from verity.models import Claim, Evidence, Feature, PushRecord, Registry, Test
 from verity.registry import canonical_json, load_registry, registry_path, save_registry
 from verity.release import VerityReleaseError, create_release
+from verity.site import generate_html
 from verity.validate import validate
 from verity.walrus import WalrusBackend, WalrusError
 
@@ -221,6 +223,41 @@ def pull_cmd(
         f"{len(registry.claims)} claim(s), "
         f"{len(registry.releases)} release(s)"
     )
+
+
+TESTNET_AGGREGATOR = "https://aggregator.walrus-testnet.walrus.space"
+
+
+@app.command("site")
+def site_cmd(
+    directory: Annotated[Path, typer.Option("--dir", help="Registry directory")] = Path("."),
+    output: Annotated[Path | None, typer.Option("--output", "-o", help="Save HTML to file")] = None,
+    push: Annotated[bool, typer.Option("--push", help="Push HTML to Walrus and print URL")] = False,
+    epochs: Annotated[int, typer.Option("--epochs", help="Walrus storage epochs")] = 5,
+) -> None:
+    """Generate a human-readable HTML proof page from verity.json."""
+    _, registry = _load(directory)
+    html = generate_html(registry)
+
+    if output:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(html, encoding="utf-8")
+        typer.echo(f"Saved to {output}")
+
+    if push:
+        backend = WalrusBackend(epochs=epochs)
+        try:
+            blob_id = backend.store(html.encode("utf-8"))
+        except WalrusError as e:
+            typer.echo(f"Push failed: {e}", err=True)
+            raise typer.Exit(1)
+        aggregator = os.environ.get("WALRUS_AGGREGATOR_URL", TESTNET_AGGREGATOR)
+        url = f"{aggregator.rstrip('/')}/v1/blobs/{blob_id}"
+        typer.echo(f"blob: {blob_id}")
+        typer.echo(f"url:  {url}")
+
+    if not output and not push:
+        typer.echo(html)
 
 
 @app.command("log")

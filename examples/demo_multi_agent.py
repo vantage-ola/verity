@@ -7,13 +7,15 @@ This script demonstrates verity's core value proposition:
   - Agent B (different session, different machine) pulls by blob ID
   - Agent B adds an audit sign-off and publishes a new release
 
-Run this script against the Walrus testnet:
-    export WALRUS_PUBLISHER_URL=https://publisher.walrus-testnet.walrus.space
-    export WALRUS_AGGREGATOR_URL=https://aggregator.walrus-testnet.walrus.space
-    python examples/demo_multi_agent.py
+Modes
+-----
+--dry-run   Use an in-memory shared store (no Walrus calls). Default.
+--live      Use the Walrus testnet (set WALRUS_PUBLISHER_URL / WALRUS_AGGREGATOR_URL).
 
-Or run in dry-run mode (no Walrus calls, simulated blob IDs):
+Examples
+--------
     python examples/demo_multi_agent.py --dry-run
+    python examples/demo_multi_agent.py --live
 """
 
 from __future__ import annotations
@@ -22,32 +24,36 @@ import argparse
 import os
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock
 
 from verity import VeritySession
 from verity.walrus import WalrusBackend
 
 
-def make_mock_backend(blob_id: str) -> MagicMock:
-    """Returns a mock StorageBackend for dry-run mode."""
-    backend = MagicMock()
-    _stored: dict[str, bytes] = {}
+class _SharedStore:
+    """In-memory blob store for dry-run mode — both agents share one instance."""
 
-    def store(content: bytes) -> str:
-        _stored[blob_id] = content
-        return blob_id
+    def __init__(self) -> None:
+        self._blobs: dict[str, bytes] = {}
 
-    def fetch(key: str) -> bytes:
-        return _stored.get(key, b"{}")
+    def store(self, content: bytes) -> str:
+        key = f"blob-{len(self._blobs)}"
+        self._blobs[key] = content
+        return key
 
-    backend.store.side_effect = store
-    backend.fetch.side_effect = fetch
-    return backend
+    def fetch(self, key: str) -> bytes:
+        return self._blobs[key]
+
+
+def _hr(label: str = "") -> None:
+    if label:
+        print(f"\n{'─' * 20} {label} {'─' * 20}")
+    else:
+        print("─" * 60)
 
 
 def agent_a(work_dir: Path, backend) -> str:
-    """Agent A: researcher — builds proof chain and pushes to Walrus."""
-    print("\n=== Agent A (researcher) ===")
+    """Agent A: researcher — builds proof chain and pushes."""
+    _hr("Agent A  (researcher)")
 
     s = VeritySession(work_dir / "verity.json", backend=backend)
     s.init(repo_id="repo:supplier-quality")
@@ -77,33 +83,35 @@ def agent_a(work_dir: Path, backend) -> str:
     errors = s.validate()
     if errors:
         raise RuntimeError(f"Validation failed: {errors}")
-    print("  validated OK")
+    print("  validate  → OK")
 
     rel = s.release("0.1.0")
-    print(f"  released {rel.id}")
+    print(f"  release   → {rel.id}")
 
     blob_id = s.push()
-    print(f"  pushed → blob: {blob_id}")
+    print(f"  push      → blob: {blob_id}")
 
     registry = s.registry()
-    print(f"  registry: {len(registry.features)} features, {len(registry.claims)} claims")
+    print(f"  registry  → {len(registry.features)} feature(s), {len(registry.claims)} claim(s)")
     return blob_id
 
 
 def agent_b(work_dir: Path, blob_id: str, backend) -> None:
     """Agent B: auditor — pulls Agent A's chain, adds sign-off, publishes."""
-    print("\n=== Agent B (auditor, fresh session) ===")
+    _hr("Agent B  (auditor, fresh session)")
 
     s = VeritySession(work_dir / "verity_audit.json", backend=backend)
     s.pull(blob_id)
-    print(f"  restored registry from {blob_id}")
+
+    registry = s.registry()
+    print(f"  pull      → restored from {blob_id}")
+    print(f"  registry  → {len(registry.features)} feature(s), {len(registry.claims)} claim(s)")
 
     errors = s.validate()
     if errors:
         raise RuntimeError(f"Validation failed after pull: {errors}")
-    print("  validated OK")
+    print("  validate  → OK")
 
-    # Add audit evidence
     s.add_evidence(
         "evd:supplier.audit.signoff",
         test_id="tst:supplier.eval",
@@ -112,22 +120,29 @@ def agent_b(work_dir: Path, blob_id: str, backend) -> None:
     )
 
     rel = s.release("1.0.0")
-    print(f"  released {rel.id} with {len(rel.claim_ids)} claim(s)")
+    print(f"  release   → {rel.id}  ({len(rel.claim_ids)} claim(s))")
 
     new_blob_id = s.push()
-    print(f"  pushed → blob: {new_blob_id}")
-    print(f"  full audit trail: {blob_id} → {new_blob_id}")
+    print(f"  push      → blob: {new_blob_id}")
+
+    _hr("Audit trail")
+    print(f"  {blob_id}  (Agent A)")
+    print(f"    └─► {new_blob_id}  (Agent B audit)")
 
     log = s.log()
-    print(f"\n  push log ({len(log)} entries):")
+    _hr("Push log")
     for entry in log:
-        print(f"    [{entry.backend}] {entry.timestamp}  {entry.blob_id}")
+        print(f"  [{entry.backend}] {entry.timestamp}  {entry.blob_id}")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="verity multi-agent demo")
-    parser.add_argument("--dry-run", action="store_true", help="Use mock backend (no Walrus calls)")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--dry-run", action="store_true", default=True, help="In-memory shared store (default)")
+    mode.add_argument("--live", action="store_true", help="Use Walrus testnet")
     args = parser.parse_args()
+
+    use_live = args.live
 
     with tempfile.TemporaryDirectory() as tmp:
         work_a = Path(tmp) / "agent_a"
@@ -135,11 +150,8 @@ def main() -> None:
         work_a.mkdir()
         work_b.mkdir()
 
-        if args.dry_run:
-            print("Running in dry-run mode (simulated Walrus)")
-            backend_a = make_mock_backend("blob-agent-a-0xabc123")
-            backend_b = make_mock_backend("blob-agent-b-0xdef456")
-        else:
+        if use_live:
+            print("Mode: live (Walrus testnet)")
             publisher = os.environ.get(
                 "WALRUS_PUBLISHER_URL", "https://publisher.walrus-testnet.walrus.space"
             )
@@ -148,14 +160,17 @@ def main() -> None:
             )
             backend_a = WalrusBackend(publisher_url=publisher, aggregator_url=aggregator)
             backend_b = WalrusBackend(publisher_url=publisher, aggregator_url=aggregator)
+        else:
+            print("Mode: dry-run (in-memory shared store)")
+            shared = _SharedStore()
+            backend_a = shared
+            backend_b = shared
 
         blob_id = agent_a(work_a, backend_a)
-
-        # Simulate Agent B receiving blob_id out-of-band (e.g. via Slack, issue comment, etc.)
-        backend_b.fetch = backend_a.fetch  # share blob store in dry-run
         agent_b(work_b, blob_id, backend_b)
 
-    print("\nDemo complete.")
+    _hr()
+    print("Demo complete.")
 
 
 if __name__ == "__main__":

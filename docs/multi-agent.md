@@ -66,21 +66,33 @@ for entry in b.log():
 
 ## Dry-run / in-memory (no Walrus)
 
-Useful for testing agent logic without real Walrus calls:
+Useful for testing agent logic without real Walrus calls. Both agents share one `_SharedStore` instance so pushes from Agent A are immediately readable by Agent B:
 
 ```python
-from unittest.mock import MagicMock
+class _SharedStore:
+    def __init__(self) -> None:
+        self._blobs: dict[str, bytes] = {}
 
-_store: dict[str, bytes] = {}
+    def store(self, content: bytes) -> str:
+        key = f"blob-{len(self._blobs)}"
+        self._blobs[key] = content
+        return key
 
-backend = MagicMock()
-backend.store.side_effect = lambda b: (_store.__setitem__("k", b), "blob-mock-123")[1]
-backend.fetch.side_effect = lambda k: _store[k]
+    def fetch(self, key: str) -> bytes:
+        return self._blobs[key]
 
-s = VeritySession("verity.json", backend=backend)
+shared = _SharedStore()
+
+a = VeritySession("agent_a/verity.json", backend=shared)
+b = VeritySession("agent_b/verity.json", backend=shared)
 ```
 
-See `examples/demo_multi_agent.py` for a full working dry-run demo with `--dry-run` flag.
+See `examples/demo_multi_agent.py` for a full working demo. Run it with:
+
+```bash
+python examples/demo_multi_agent.py           # dry-run (default, in-memory)
+python examples/demo_multi_agent.py --live    # Walrus testnet
+```
 
 ---
 

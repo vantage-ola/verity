@@ -11,6 +11,22 @@ This project uses [semantic versioning](https://semver.org/).
 
 ---
 
+## [0.1.4] — 2026-05-23
+
+### Added
+- `verity site` command — generates a human-readable HTML proof page from `verity.json`; `--output` saves locally, `--push` uploads to Walrus and prints a public viewer URL
+- `generate_html(registry)` exported from `verity` public API
+- `scripts/store_project_context.py` — one-shot script to seed MemWal with verity project knowledge so any agent can `recall("verity")` and arrive with full context
+- `docs/scripts.md` — documents the store_project_context script
+- `docs/cli.md` updated with full `verity site` reference
+- Coverage badge added to README
+
+### Changed
+- `examples/demo_multi_agent.py` — replaced `backend_b.fetch = backend_a.fetch` hack with a clean `_SharedStore` class; added `--live` flag for Walrus testnet mode (dry-run is now the default)
+- `docs/multi-agent.md` dry-run example updated to use the `_SharedStore` pattern
+
+---
+
 ## [0.1.3] — 2026-05-23
 
 ### Added
@@ -130,7 +146,8 @@ Initial release. Full Phase 1–3 implementation.
 
 ---
 
-[Unreleased]: https://github.com/vantage-ola/verity/compare/v0.1.3...HEAD
+[Unreleased]: https://github.com/vantage-ola/verity/compare/v0.1.4...HEAD
+[0.1.4]: https://github.com/vantage-ola/verity/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/vantage-ola/verity/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/vantage-ola/verity/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/vantage-ola/verity/compare/v0.1.0...v0.1.1

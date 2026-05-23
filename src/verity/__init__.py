@@ -3,6 +3,7 @@ from verity.memwal import MemWalBackend
 from verity.models import Claim, Evidence, Feature, PushRecord, Registry, Release, Test
 from verity.registry import load_registry, save_registry
 from verity.session import VeritySession
+from verity.site import generate_html
 from verity.validate import validate
 from verity.walrus import WalrusBackend, pull, push
 
@@ -18,6 +19,7 @@ __all__ = [
     "WalrusBackend",
     "MemWalBackend",
     "VeritySession",
+    "generate_html",
     "load_registry",
     "save_registry",
     "validate",
