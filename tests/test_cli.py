@@ -261,6 +261,17 @@ def test_pull_error_exits_nonzero(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
     assert result.exit_code == 1
 
 
+def test_pull_creates_parent_directory(tmp_path: Path) -> None:
+    target = tmp_path / "new" / "nested" / "dir"
+    remote_registry = Registry(repo_id="repo:remote")
+    content = canonical_json(remote_registry).encode()
+    with patch("verity.walrus.httpx.Client") as MockClient:
+        MockClient.return_value.__enter__.return_value.get.return_value = _mock_get_resp(200, content)
+        result = runner.invoke(app, ["pull", FAKE_BLOB, "--dir", str(target)])
+    assert result.exit_code == 0
+    assert (target / "verity.json").exists()
+
+
 # ---------------------------------------------------------------------------
 # log
 # ---------------------------------------------------------------------------

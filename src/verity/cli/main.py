@@ -83,10 +83,11 @@ def add_claim(
     title: Annotated[str, typer.Argument(help="Short title")],
     feature: Annotated[str, typer.Option("--feature", "-f", help="Parent feature ID")],
     tier: Annotated[str, typer.Option("--tier", help="Claim tier")] = "T1",
+    status: Annotated[str, typer.Option("--status", help="open|verified|rejected")] = "open",
 ) -> None:
     """Add a claim to the registry."""
     path, registry = _load()
-    claim = Claim(id=id, feature_id=feature, title=title, tier=tier)  # type: ignore[arg-type]
+    claim = Claim(id=id, feature_id=feature, title=title, tier=tier, status=status)  # type: ignore[arg-type]
     registry.claims.append(claim)
     _save_validated(path, registry)
     typer.echo(f"Added claim {id}")
@@ -99,10 +100,11 @@ def add_test(
     claim: Annotated[str, typer.Option("--claim", "-c", help="Parent claim ID")],
     kind: Annotated[str, typer.Option("--kind", "-k", help="unit or integration")] = "unit",
     path: Annotated[str, typer.Option("--path", "-p", help="Test file path")] = "",
+    status: Annotated[str, typer.Option("--status", help="pending|passing|failing")] = "pending",
 ) -> None:
     """Add a test to the registry."""
     reg_path, registry = _load()
-    test = Test(id=id, claim_id=claim, kind=kind, path=path)  # type: ignore[arg-type]
+    test = Test(id=id, claim_id=claim, kind=kind, path=path, status=status)  # type: ignore[arg-type]
     registry.tests.append(test)
     _save_validated(reg_path, registry)
     typer.echo(f"Added test {id}")
@@ -205,6 +207,7 @@ def pull_cmd(
 
     registry = Registry.model_validate(json.loads(content))
     path = registry_path(directory)
+    path.parent.mkdir(parents=True, exist_ok=True)
     save_registry(registry, path)
     typer.echo(f"Restored registry from {blob_id}")
     typer.echo(

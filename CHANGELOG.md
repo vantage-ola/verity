@@ -11,6 +11,18 @@ This project uses [semantic versioning](https://semver.org/).
 
 ---
 
+## [0.1.2] — 2026-05-23
+
+### Fixed
+- `verity pull --dir <path>` now creates the target directory (and any parents) if it does not exist — previously raised `FileNotFoundError`
+- Same fix applied to `VeritySession.pull()` for programmatic use
+
+### Added
+- `--status` option on `verity add claim` (default: `open`)
+- `--status` option on `verity add test` (default: `pending`)
+
+---
+
 ## [0.1.1] — 2026-05-23
 
 ### Changed
@@ -108,6 +120,7 @@ Initial release. Full Phase 1–3 implementation.
 
 ---
 
-[Unreleased]: https://github.com/vantage-ola/verity/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/vantage-ola/verity/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/vantage-ola/verity/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/vantage-ola/verity/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/vantage-ola/verity/releases/tag/v0.1.0

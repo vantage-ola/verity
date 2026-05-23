@@ -51,6 +51,7 @@ class VeritySession:
         return load_registry(self.path)
 
     def _save(self, registry: Registry) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
         save_registry(registry, self.path)
 
     def init(self, repo_id: str = "repo:default") -> Registry:
