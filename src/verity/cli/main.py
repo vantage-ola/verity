@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
+from dotenv import load_dotenv
 
 from verity.backends import StorageBackend
 from verity.memwal import MemWalBackend, MemWalError
@@ -17,6 +18,11 @@ from verity.walrus import WalrusBackend, WalrusError
 app = typer.Typer(help="verity — proof-chain registry for AI agents")
 add_app = typer.Typer(help="Add an entity to the registry")
 app.add_typer(add_app, name="add")
+
+
+@app.callback()
+def _load_env() -> None:
+    load_dotenv()
 
 BackendChoice = Annotated[str, typer.Option("--backend", "-b", help="Storage backend: walrus or memwal")]
 

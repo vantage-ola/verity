@@ -11,6 +11,16 @@ This project uses [semantic versioning](https://semver.org/).
 
 ---
 
+## [0.1.3] — 2026-05-23
+
+### Added
+- `.env` file support via `python-dotenv` — CLI now auto-loads `.env` on startup so `MEMWAL_KEY`, `MEMWAL_ACCOUNT_ID`, `WALRUS_PUBLISHER_URL`, etc. work without manual `export`
+
+### Fixed
+- `test_raises_without_key` and `test_raises_without_account_id` now explicitly clear env vars so a local `.env` file doesn't pollute the test session
+
+---
+
 ## [0.1.2] — 2026-05-23
 
 ### Fixed
@@ -120,7 +130,8 @@ Initial release. Full Phase 1–3 implementation.
 
 ---
 
-[Unreleased]: https://github.com/vantage-ola/verity/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/vantage-ola/verity/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/vantage-ola/verity/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/vantage-ola/verity/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/vantage-ola/verity/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/vantage-ola/verity/releases/tag/v0.1.0

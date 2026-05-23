@@ -38,13 +38,15 @@ def _backend(**kwargs) -> tuple[MemWalBackend, MagicMock]:
 
 # --- init ---
 
-def test_raises_without_key() -> None:
+def test_raises_without_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("MEMWAL_KEY", raising=False)
     with pytest.raises(MemWalError, match="key"):
         with patch("verity.memwal.MemWalSync"):
             MemWalBackend(account_id="0xacc", server_url=SERVER_URL)
 
 
-def test_raises_without_account_id() -> None:
+def test_raises_without_account_id(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("MEMWAL_ACCOUNT_ID", raising=False)
     with pytest.raises(MemWalError, match="account_id"):
         with patch("verity.memwal.MemWalSync"):
             MemWalBackend(key="0xkey", server_url=SERVER_URL)
