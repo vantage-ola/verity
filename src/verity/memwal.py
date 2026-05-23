@@ -1,34 +1,42 @@
 """
 MemWal storage backend for verity.
 
-MemWal (https://memwal.io) is a Walrus-backed memory layer for AI agents.
-It handles encryption, embedding, and Walrus storage server-side; the
-client signs requests with an Ed25519 delegate key and receives a Walrus
-blob ID in return.
+Storage strategy (Option A):
+  store() — uploads the registry blob to Walrus directly (unencrypted,
+            content-addressed, directly retrievable), then registers a
+            semantic pointer in MemWal so agents can discover registries
+            via recall("verity registry for repo:X").
+  fetch() — fetches directly from the Walrus aggregator; no MemWal
+            round-trip needed.
 
-Installation:
-    pip install memwal          # or: uv add memwal
+This means:
+  - blob_id is a standard Walrus blob ID, usable by any Walrus client.
+  - MemWal provides semantic discoverability on top, not the storage layer.
+  - MemWal registration failure is non-fatal — the blob is already on Walrus.
 
 Required configuration (pass as kwargs or set env vars):
     MEMWAL_KEY          Ed25519 delegate key (hex), issued by the MemWal relayer
     MEMWAL_ACCOUNT_ID   Your MemWal account ID (on-chain address)
 
 Optional configuration:
-    MEMWAL_SERVER_URL   Relayer URL (default: https://relayer.memwal.ai)
-    MEMWAL_NAMESPACE    Logical namespace for this project (default: verity)
-    MEMWAL_ENV          Preset env: prod | dev | staging | local
-
-Store uses the MemWal relayer; fetch goes to the Walrus aggregator
-directly (the blob_id returned by MemWal is a standard Walrus blob ID).
+    MEMWAL_SERVER_URL       Relayer URL (default: prod relayer)
+    MEMWAL_NAMESPACE        Logical namespace (default: verity)
+    MEMWAL_ENV              Relayer preset: prod | dev | staging | local
+    WALRUS_PUBLISHER_URL    Walrus publisher endpoint
+    WALRUS_AGGREGATOR_URL   Walrus aggregator endpoint
 """
 
 from __future__ import annotations
 
+import json
 import os
 
-import httpx
-
-from verity.walrus import AGGREGATOR_URL
+from verity.walrus import (
+    AGGREGATOR_URL as _WALRUS_AGGREGATOR_URL,
+    PUBLISHER_URL as _WALRUS_PUBLISHER_URL,
+    WalrusBackend,
+    WalrusError,
+)
 
 try:
     from memwal import MemWalSync
@@ -48,8 +56,8 @@ class MemWalError(Exception):
 
 class MemWalBackend:
     """
-    StorageBackend that stores via the MemWal relayer and fetches directly
-    from the Walrus aggregator.
+    StorageBackend that stores blobs on Walrus and registers a semantic
+    pointer in MemWal for agent discovery via recall().
     """
 
     def __init__(
@@ -60,7 +68,9 @@ class MemWalBackend:
         server_url: str | None = None,
         namespace: str | None = None,
         env: str | None = None,
-        aggregator_url: str = AGGREGATOR_URL,
+        publisher_url: str | None = None,
+        aggregator_url: str | None = None,
+        epochs: int = 5,
     ) -> None:
         if not _MEMWAL_AVAILABLE:
             raise MemWalError(  # pragma: no cover
@@ -79,7 +89,6 @@ class MemWalBackend:
             raise MemWalError("MemWal account_id is required (set MEMWAL_ACCOUNT_ID or pass account_id=)")
 
         self.namespace = _namespace
-        self._aggregator_url = aggregator_url
 
         create_kwargs: dict[str, str] = dict(
             key=_key,
@@ -92,28 +101,46 @@ class MemWalBackend:
 
         self._client: MemWalSync = MemWalSync.create(**create_kwargs)
 
+        # Internal Walrus backend — reuses WALRUS_PUBLISHER/AGGREGATOR_URL env vars
+        _publisher = publisher_url or os.environ.get("WALRUS_PUBLISHER_URL", _WALRUS_PUBLISHER_URL)
+        _aggregator = aggregator_url or os.environ.get("WALRUS_AGGREGATOR_URL", _WALRUS_AGGREGATOR_URL)
+        self._walrus = WalrusBackend(
+            publisher_url=_publisher,
+            aggregator_url=_aggregator,
+            epochs=epochs,
+        )
+
     def store(self, content: bytes) -> str:
         """
-        Upload content to MemWal via remember_and_wait().
-        Returns the Walrus blob ID assigned by the relayer.
+        Upload content to Walrus (primary) and register a discovery pointer
+        in MemWal (secondary, non-fatal). Returns the Walrus blob ID.
         """
         try:
-            result = self._client.remember_and_wait(
-                content.decode("utf-8"), namespace=self.namespace
+            blob_id = self._walrus.store(content)
+        except WalrusError as exc:
+            raise MemWalError(f"MemWal store failed (Walrus upload): {exc}") from exc
+
+        # Register semantic pointer so agents can recall("verity registry for repo:X")
+        try:
+            repo_id = json.loads(content).get("repo_id", "unknown")
+        except Exception:
+            repo_id = "unknown"
+
+        try:
+            self._client.remember_and_wait(
+                f"verity registry blob_id={blob_id} repo={repo_id}",
+                namespace=self.namespace,
             )
-        except _SdkError as exc:
-            raise MemWalError(f"MemWal store failed: {exc}") from exc
-        return result.blob_id
+        except _SdkError:
+            pass  # non-fatal — blob is already on Walrus
+
+        return blob_id
 
     def fetch(self, key: str) -> bytes:
         """
-        Fetch content by Walrus blob ID directly from the aggregator.
-        MemWal stores blobs on Walrus, so no relayer round-trip is needed.
+        Fetch a registry blob directly from the Walrus aggregator.
         """
-        with httpx.Client(timeout=30) as client:
-            response = client.get(f"{self._aggregator_url}/v1/blobs/{key}")
-        if response.status_code != 200:
-            raise MemWalError(
-                f"MemWal fetch failed: HTTP {response.status_code} — {response.text[:200]}"
-            )
-        return response.content
+        try:
+            return self._walrus.fetch(key)
+        except WalrusError as exc:
+            raise MemWalError(f"MemWal fetch failed: {exc}") from exc

@@ -6,49 +6,51 @@ import pytest
 
 from verity.memwal import MemWalBackend, MemWalError
 from verity.registry import canonical_json
-from verity.walrus import AGGREGATOR_URL
+from verity.walrus import WalrusError
 
 FAKE_BLOB_ID = "mw-AbCdEfGhIjKlMnOpQrStUvWxYz0123456789"
 SERVER_URL = "https://relayer.memwal.example"
 
 
-def _make_client(blob_id: str = FAKE_BLOB_ID) -> MagicMock:
-    """Return a mock MemWalSync client whose remember_and_wait returns blob_id."""
-    client = MagicMock()
-    result = MagicMock()
-    result.blob_id = blob_id
-    client.remember_and_wait.return_value = result
-    return client
+def _backend(**kwargs) -> tuple[MemWalBackend, MagicMock, MagicMock]:
+    """
+    Build a MemWalBackend with mocked internals.
+    Returns (backend, mock_memwal_client, mock_walrus_backend).
+    """
+    mock_memwal = MagicMock()
+    mock_walrus = MagicMock()
+    mock_walrus.store.return_value = kwargs.pop("blob_id", FAKE_BLOB_ID)
+    mock_walrus.fetch.return_value = kwargs.pop("fetch_content", b"{}")
 
-
-def _backend(**kwargs) -> tuple[MemWalBackend, MagicMock]:
-    """Build a MemWalBackend with a mocked MemWalSync client. Returns (backend, mock_client)."""
-    mock_client = _make_client(kwargs.pop("blob_id", FAKE_BLOB_ID))
-    with patch("verity.memwal.MemWalSync") as MockSync:
-        MockSync.create.return_value = mock_client
+    with patch("verity.memwal.MemWalSync") as MockSync, \
+         patch("verity.memwal.WalrusBackend", return_value=mock_walrus):
+        MockSync.create.return_value = mock_memwal
         b = MemWalBackend(
             key="0xdeadbeef",
             account_id="0xaccount",
             server_url=SERVER_URL,
             **kwargs,
         )
-    b._client = mock_client
-    return b, mock_client
+    b._client = mock_memwal
+    b._walrus = mock_walrus
+    return b, mock_memwal, mock_walrus
 
 
-# --- init ---
+# ---------------------------------------------------------------------------
+# init / config
+# ---------------------------------------------------------------------------
 
 def test_raises_without_key(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("MEMWAL_KEY", raising=False)
     with pytest.raises(MemWalError, match="key"):
-        with patch("verity.memwal.MemWalSync"):
+        with patch("verity.memwal.MemWalSync"), patch("verity.memwal.WalrusBackend"):
             MemWalBackend(account_id="0xacc", server_url=SERVER_URL)
 
 
 def test_raises_without_account_id(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("MEMWAL_ACCOUNT_ID", raising=False)
     with pytest.raises(MemWalError, match="account_id"):
-        with patch("verity.memwal.MemWalSync"):
+        with patch("verity.memwal.MemWalSync"), patch("verity.memwal.WalrusBackend"):
             MemWalBackend(key="0xkey", server_url=SERVER_URL)
 
 
@@ -56,14 +58,16 @@ def test_reads_config_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("MEMWAL_KEY", "0xkeyfromenviron")
     monkeypatch.setenv("MEMWAL_ACCOUNT_ID", "0xaccfromenviron")
     monkeypatch.setenv("MEMWAL_SERVER_URL", SERVER_URL)
-    with patch("verity.memwal.MemWalSync") as MockSync:
+    with patch("verity.memwal.MemWalSync") as MockSync, \
+         patch("verity.memwal.WalrusBackend"):
         MockSync.create.return_value = MagicMock()
         b = MemWalBackend()
     assert b._client is not None
 
 
 def test_create_passes_key_and_account_id() -> None:
-    with patch("verity.memwal.MemWalSync") as MockSync:
+    with patch("verity.memwal.MemWalSync") as MockSync, \
+         patch("verity.memwal.WalrusBackend"):
         MockSync.create.return_value = MagicMock()
         MemWalBackend(key="0xmykey", account_id="0xmyacc", server_url=SERVER_URL)
         call_kwargs = MockSync.create.call_args.kwargs
@@ -72,7 +76,8 @@ def test_create_passes_key_and_account_id() -> None:
 
 
 def test_create_passes_namespace() -> None:
-    with patch("verity.memwal.MemWalSync") as MockSync:
+    with patch("verity.memwal.MemWalSync") as MockSync, \
+         patch("verity.memwal.WalrusBackend"):
         MockSync.create.return_value = MagicMock()
         MemWalBackend(key="0xk", account_id="0xa", server_url=SERVER_URL, namespace="myns")
         call_kwargs = MockSync.create.call_args.kwargs
@@ -80,95 +85,96 @@ def test_create_passes_namespace() -> None:
 
 
 def test_create_passes_env_when_set() -> None:
-    with patch("verity.memwal.MemWalSync") as MockSync:
+    with patch("verity.memwal.MemWalSync") as MockSync, \
+         patch("verity.memwal.WalrusBackend"):
         MockSync.create.return_value = MagicMock()
         MemWalBackend(key="0xk", account_id="0xa", server_url=SERVER_URL, env="prod")
         call_kwargs = MockSync.create.call_args.kwargs
     assert call_kwargs["env"] == "prod"
 
 
-# --- store ---
+# ---------------------------------------------------------------------------
+# store — Walrus primary, MemWal pointer secondary
+# ---------------------------------------------------------------------------
 
-def test_store_returns_blob_id(minimal_registry) -> None:
-    backend, _ = _backend()
-    blob_id = backend.store(canonical_json(minimal_registry).encode())
-    assert blob_id == FAKE_BLOB_ID
+def test_store_returns_walrus_blob_id(minimal_registry) -> None:
+    backend, _, _ = _backend()
+    result = backend.store(canonical_json(minimal_registry).encode())
+    assert result == FAKE_BLOB_ID
 
 
-def test_store_calls_remember_and_wait(minimal_registry) -> None:
-    backend, mock_client = _backend()
+def test_store_calls_walrus_store(minimal_registry) -> None:
+    backend, _, mock_walrus = _backend()
     content = canonical_json(minimal_registry).encode()
     backend.store(content)
-    mock_client.remember_and_wait.assert_called_once()
-    call_args = mock_client.remember_and_wait.call_args
-    assert call_args.args[0] == content.decode("utf-8")
+    mock_walrus.store.assert_called_once_with(content)
 
 
-def test_store_passes_namespace(minimal_registry) -> None:
-    backend, mock_client = _backend(namespace="proj-ns")
-    backend.store(b"hello")
-    call_kwargs = mock_client.remember_and_wait.call_args.kwargs
+def test_store_registers_pointer_in_memwal(minimal_registry) -> None:
+    backend, mock_memwal, _ = _backend()
+    backend.store(canonical_json(minimal_registry).encode())
+    mock_memwal.remember_and_wait.assert_called_once()
+    text = mock_memwal.remember_and_wait.call_args.args[0]
+    assert FAKE_BLOB_ID in text
+    assert "verity registry" in text
+
+
+def test_store_pointer_includes_repo_id(minimal_registry) -> None:
+    backend, mock_memwal, _ = _backend()
+    backend.store(canonical_json(minimal_registry).encode())
+    text = mock_memwal.remember_and_wait.call_args.args[0]
+    assert minimal_registry.repo_id in text
+
+
+def test_store_passes_namespace_to_memwal(minimal_registry) -> None:
+    backend, mock_memwal, _ = _backend(namespace="proj-ns")
+    backend.store(canonical_json(minimal_registry).encode())
+    call_kwargs = mock_memwal.remember_and_wait.call_args.kwargs
     assert call_kwargs.get("namespace") == "proj-ns"
 
 
-def test_store_wraps_sdk_error() -> None:
-    from memwal import MemWalError as SdkError
-
-    backend, mock_client = _backend()
-    mock_client.remember_and_wait.side_effect = SdkError("relayer down")
-    with pytest.raises(MemWalError, match="MemWal store failed"):
+def test_store_walrus_error_raises(minimal_registry) -> None:
+    backend, _, mock_walrus = _backend()
+    mock_walrus.store.side_effect = WalrusError("publisher down")
+    with pytest.raises(MemWalError, match="Walrus upload"):
         backend.store(b"data")
 
 
-# --- fetch (goes to Walrus aggregator directly) ---
+def test_store_memwal_error_is_nonfatal(minimal_registry) -> None:
+    from memwal import MemWalError as SdkError
 
-def _mock_http_response(status_code: int, content: bytes) -> MagicMock:
-    resp = MagicMock()
-    resp.status_code = status_code
-    resp.content = content
-    resp.text = content.decode(errors="replace")
-    return resp
+    backend, mock_memwal, _ = _backend()
+    mock_memwal.remember_and_wait.side_effect = SdkError("relayer down")
+    # should NOT raise — blob is on Walrus, MemWal pointer is best-effort
+    result = backend.store(canonical_json(minimal_registry).encode())
+    assert result == FAKE_BLOB_ID
 
+
+# ---------------------------------------------------------------------------
+# fetch — direct Walrus, no MemWal
+# ---------------------------------------------------------------------------
 
 def test_fetch_returns_content(minimal_registry) -> None:
     content = canonical_json(minimal_registry).encode()
-    backend, _ = _backend()
-    with patch("verity.memwal.httpx.Client") as MockClient:
-        MockClient.return_value.__enter__.return_value.get.return_value = (
-            _mock_http_response(200, content)
-        )
-        result = backend.fetch(FAKE_BLOB_ID)
-    assert result == content
+    backend, _, _ = _backend(fetch_content=content)
+    assert backend.fetch(FAKE_BLOB_ID) == content
 
 
-def test_fetch_requests_walrus_aggregator_url() -> None:
-    backend, _ = _backend()
-    with patch("verity.memwal.httpx.Client") as MockClient:
-        mock_get = MockClient.return_value.__enter__.return_value.get
-        mock_get.return_value = _mock_http_response(200, b"{}")
+def test_fetch_calls_walrus_fetch() -> None:
+    backend, _, mock_walrus = _backend()
+    backend.fetch(FAKE_BLOB_ID)
+    mock_walrus.fetch.assert_called_once_with(FAKE_BLOB_ID)
+
+
+def test_fetch_does_not_call_memwal() -> None:
+    backend, mock_memwal, _ = _backend()
+    backend.fetch(FAKE_BLOB_ID)
+    mock_memwal.recall.assert_not_called()
+    mock_memwal.remember_and_wait.assert_not_called()
+
+
+def test_fetch_walrus_error_wraps_as_memwal_error() -> None:
+    backend, _, mock_walrus = _backend()
+    mock_walrus.fetch.side_effect = WalrusError("blob not found")
+    with pytest.raises(MemWalError, match="fetch failed"):
         backend.fetch(FAKE_BLOB_ID)
-        url = mock_get.call_args.args[0]
-    assert FAKE_BLOB_ID in url
-    assert url.startswith(AGGREGATOR_URL)
-
-
-def test_fetch_http_error_raises() -> None:
-    backend, _ = _backend()
-    with patch("verity.memwal.httpx.Client") as MockClient:
-        MockClient.return_value.__enter__.return_value.get.return_value = (
-            _mock_http_response(404, b"not found")
-        )
-        with pytest.raises(MemWalError, match="fetch failed: HTTP 404"):
-            backend.fetch(FAKE_BLOB_ID)
-
-
-def test_fetch_uses_custom_aggregator_url() -> None:
-    custom_url = "https://my-aggregator.example.com"
-    backend, _ = _backend()
-    backend._aggregator_url = custom_url
-    with patch("verity.memwal.httpx.Client") as MockClient:
-        mock_get = MockClient.return_value.__enter__.return_value.get
-        mock_get.return_value = _mock_http_response(200, b"{}")
-        backend.fetch(FAKE_BLOB_ID)
-        url = mock_get.call_args.args[0]
-    assert url.startswith(custom_url)

@@ -57,6 +57,14 @@ backend = MemWalBackend(
 
 ## How it works
 
-`store()` calls `MemWalSync.remember_and_wait()`, which sends the registry JSON to the MemWal relayer. The relayer handles encryption and uploads to Walrus server-side. It returns a Walrus blob ID.
+**store()** uploads the registry blob to Walrus directly (unencrypted, content-addressed), then registers a short semantic pointer in MemWal:
 
-`fetch()` goes **directly to the Walrus aggregator** — no relayer round-trip needed. MemWal blob IDs are Walrus blob IDs, so the aggregator can serve them directly.
+```
+"verity registry blob_id=<id> repo=<repo_id>"
+```
+
+This lets any agent with MemWal access discover your registries via `recall("verity registry for repo:X")`. The MemWal registration is non-fatal — if the relayer is down, the blob is already safely on Walrus.
+
+**fetch()** retrieves the blob directly from the Walrus aggregator — no MemWal round-trip needed. The `blob_id` returned by `push()` is a standard Walrus blob ID, readable by any Walrus client regardless of how it was pushed.
+
+**Why not store encrypted in MemWal?** MemWal encrypts content with SEAL before writing to Walrus, so a direct Walrus fetch returns ciphertext. verity needs deterministic JSON round-trips, so it keeps the registry unencrypted on Walrus and uses MemWal only for the discovery layer.
