@@ -36,6 +36,9 @@ VeritySession(path="verity.json", *, backend: StorageBackend | None = None)
 | `pull(blob_id)` | `None` | Fetch from backend, overwrite local registry |
 | `log()` | `list[PushRecord]` | Push history |
 | `registry()` | `Registry` | Current in-memory registry |
+| `set_context(key, value)` | `None` | Upsert a named context entry |
+| `get_context(key)` | `str \| None` | Return value for key, or `None` |
+| `remove_context(key)` | `bool` | Remove entry; returns `True` if it existed |
 
 ---
 
@@ -96,12 +99,31 @@ restored = pull(blob_id, aggregator_url="...")
 
 ---
 
+### Context example
+
+```python
+s = VeritySession("verity.json")
+
+s.set_context("architecture", "5-layer proof chain: feature → claim → test → evidence → release")
+s.set_context("decisions", "chose MemWal Option A — store blobs on Walrus, use MemWal for discovery")
+
+print(s.get_context("architecture"))
+# 5-layer proof chain: feature → claim → test → evidence → release
+
+s.remove_context("decisions")
+print(s.registry().context)  # [ContextEntry(key='architecture', value='...')]
+```
+
+Context entries are automatically stored as MemWal memories when you call `push()` with a `MemWalBackend`.
+
+---
+
 ## Models
 
 All models are pydantic v2 with `extra="forbid"`. ID prefixes are enforced at the model level.
 
 ```python
-from verity import Feature, Claim, Test, Evidence, Release, Registry, PushRecord
+from verity import Feature, Claim, Test, Evidence, Release, Registry, PushRecord, ContextEntry
 ```
 
 See [schema.md](schema.md) for field definitions and allowed values.

@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 
 from verity.backends import StorageBackend
 from verity.memwal import MemWalBackend, MemWalError
-from verity.models import Claim, Evidence, Feature, PushRecord, Registry, Test
+from verity.models import Claim, ContextEntry, Evidence, Feature, PushRecord, Registry, Test
 from verity.registry import canonical_json, load_registry, registry_path, save_registry
 from verity.release import VerityReleaseError, create_release
 from verity.site import generate_html
@@ -19,7 +19,9 @@ from verity.walrus import WalrusBackend, WalrusError
 
 app = typer.Typer(help="verity — proof-chain registry for AI agents")
 add_app = typer.Typer(help="Add an entity to the registry")
+context_app = typer.Typer(no_args_is_help=True, help="Manage project context entries.")
 app.add_typer(add_app, name="add")
+app.add_typer(context_app, name="context")
 
 
 @app.callback()
@@ -258,6 +260,54 @@ def site_cmd(
 
     if not output and not push:
         typer.echo(html)
+
+
+@context_app.command("set")
+def context_set(
+    key: Annotated[str, typer.Argument(help="Context entry key")],
+    value: Annotated[str, typer.Argument(help="Context entry value")],
+    directory: Annotated[Path, typer.Option("--dir", help="Registry directory")] = Path("."),
+) -> None:
+    """Set (upsert) a project context entry."""
+    path, registry = _load(directory)
+    for entry in registry.context:
+        if entry.key == key:
+            entry.value = value
+            save_registry(registry, path)
+            typer.echo(f"Updated: {key}")
+            return
+    registry.context.append(ContextEntry(key=key, value=value))
+    save_registry(registry, path)
+    typer.echo(f"Set: {key}")
+
+
+@context_app.command("list")
+def context_list(
+    directory: Annotated[Path, typer.Option("--dir", help="Registry directory")] = Path("."),
+) -> None:
+    """List all project context entries."""
+    _, registry = _load(directory)
+    if not registry.context:
+        typer.echo("No context entries. Use 'verity context set KEY VALUE' to add some.")
+        return
+    for entry in registry.context:
+        typer.echo(f"{entry.key}: {entry.value}")
+
+
+@context_app.command("remove")
+def context_remove(
+    key: Annotated[str, typer.Argument(help="Context entry key to remove")],
+    directory: Annotated[Path, typer.Option("--dir", help="Registry directory")] = Path("."),
+) -> None:
+    """Remove a context entry by key."""
+    path, registry = _load(directory)
+    before = len(registry.context)
+    registry.context = [e for e in registry.context if e.key != key]
+    if len(registry.context) == before:
+        typer.echo(f"No entry found with key: {key}", err=True)
+        raise typer.Exit(1)
+    save_registry(registry, path)
+    typer.echo(f"Removed: {key}")
 
 
 @app.command("log")

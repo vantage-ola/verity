@@ -8,6 +8,7 @@ Everything lives in a single file. Keys are always sorted; format is compact can
 {
   "schema_version": "0.1.0",
   "repo_id": "repo:my-project",
+  "context": [...],
   "features": [...],
   "claims": [...],
   "tests": [...],
@@ -36,6 +37,26 @@ Recommended convention: `<namespace>.<entity>.<qualifier>` — e.g. `clm:auth.lo
 ---
 
 ## Entity fields
+
+### ContextEntry
+
+Named narrative note attached to the registry. Context entries are free-form and travel with the proof chain. They are stored in MemWal automatically when pushing via `verity push --backend memwal`.
+
+```json
+{
+  "key": "architecture",
+  "value": "5-layer proof chain: feature → claim → test → evidence → release"
+}
+```
+
+| Field | Type | Notes |
+|---|---|---|
+| `key` | string | Unique name for this entry (no prefix enforced) |
+| `value` | string | Free-form narrative text |
+
+Manage via `verity context set/list/remove` or `VeritySession.set_context()`.
+
+---
 
 ### Feature
 

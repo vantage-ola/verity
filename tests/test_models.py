@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from verity.models import Claim, Evidence, Feature, Registry, Release, Test
+from verity.models import Claim, ContextEntry, Evidence, Feature, Registry, Release, Test
 
 
 def test_feature_valid():
@@ -66,3 +66,21 @@ def test_registry_defaults():
     assert r.schema_version == "0.1.0"
     assert r.features == []
     assert r.releases == []
+    assert r.context == []
+
+
+def test_context_entry_valid():
+    e = ContextEntry(key="arch", value="5-layer proof chain")
+    assert e.key == "arch"
+    assert e.value == "5-layer proof chain"
+
+
+def test_context_entry_extra_field_rejected():
+    with pytest.raises(ValidationError):
+        ContextEntry(key="arch", value="v", extra="nope")  # type: ignore[call-arg]
+
+
+def test_registry_with_context():
+    r = Registry(repo_id="repo:test", context=[ContextEntry(key="k", value="v")])
+    assert r.context[0].key == "k"
+    assert r.context[0].value == "v"

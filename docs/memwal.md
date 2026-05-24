@@ -57,13 +57,20 @@ backend = MemWalBackend(
 
 ## How it works
 
-**store()** uploads the registry blob to Walrus directly (unencrypted, content-addressed), then registers a short semantic pointer in MemWal:
+**store()** uploads the registry blob to Walrus directly (unencrypted, content-addressed), then registers two kinds of memories in MemWal:
 
-```
-"verity registry blob_id=<id> repo=<repo_id>"
-```
+1. A registry pointer so agents can discover registries by repo:
+   ```
+   "verity registry blob_id=<id> repo=<repo_id>"
+   ```
 
-This lets any agent with MemWal access discover your registries via `recall("verity registry for repo:X")`. The MemWal registration is non-fatal — if the relayer is down, the blob is already safely on Walrus.
+2. One memory per context entry (see `verity context set`):
+   ```
+   "verity context key=architecture repo=<repo_id>: 5-layer proof chain…"
+   "verity context key=decisions repo=<repo_id>: chose MemWal Option A…"
+   ```
+
+All MemWal registrations are non-fatal — if the relayer is down, the blob is already safely on Walrus. Agents can discover registries with `recall("verity registry for repo:X")` and retrieve project knowledge with `recall("verity architecture")` or `recall("verity decisions")`.
 
 **fetch()** retrieves the blob directly from the Walrus aggregator — no MemWal round-trip needed. The `blob_id` returned by `push()` is a standard Walrus blob ID, readable by any Walrus client regardless of how it was pushed.
 

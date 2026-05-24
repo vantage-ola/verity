@@ -1,16 +1,24 @@
 """
-Store verity project context in MemWal so any agent can recall("verity") and
-arrive with full project knowledge — no context pasting required.
+Sync verity.json context entries to MemWal so any agent can recall("verity")
+and arrive with full project knowledge — no context pasting required.
 
-Usage:
+Add context entries first:
+    verity context set architecture "5-layer proof chain: feature → claim → test → evidence → release"
+    verity context set decisions "we chose MemWal Option A because SEAL encryption..."
+
+Then run this script to push them to MemWal:
     python scripts/store_project_context.py
 
 Requires MEMWAL_KEY and MEMWAL_ACCOUNT_ID (reads from .env automatically).
+When you push via `verity push --backend memwal`, context is stored automatically.
+This script is useful for a one-shot sync without a full push.
 """
 
 from __future__ import annotations
 
+import json
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -23,74 +31,7 @@ except ImportError:
     raise SystemExit(1)
 
 NAMESPACE = "verity-project"
-
-MEMORIES = [
-    (
-        "verity overview",
-        "verity is a proof-chain registry for AI agents backed by Walrus. "
-        "It gives agents structured, portable memory: track what was claimed, "
-        "what was tested, and what was proved, all in a single verity.json file. "
-        "Push to Walrus → get a blob_id; pull by blob_id in any future session, "
-        "on any machine, by any agent. PyPI package: walrus-verity.",
-    ),
-    (
-        "verity proof-chain model",
-        "verity's data model is a five-layer proof chain: "
-        "feature → claim → test → evidence → release. "
-        "Features describe capabilities. Claims are assertions a feature makes. "
-        "Tests describe how claims are verified. Evidence records test run outcomes. "
-        "Releases are fail-closed snapshots: all verified claims need passing tests "
-        "with passed evidence, or the release is rejected.",
-    ),
-    (
-        "verity storage design",
-        "verity uses two storage layers: Walrus as primary (unencrypted, "
-        "content-addressed blobs via HTTP REST), and MemWal as semantic discovery index "
-        "(registers a pointer 'verity registry blob_id=<id> repo=<repo_id>' so agents "
-        "can recall registries without knowing the blob_id). blob_id is always a plain "
-        "Walrus blob_id, usable by any Walrus client. MemWal registration is non-fatal. "
-        "Backends: WalrusBackend, MemWalBackend. CLI: verity push --backend walrus|memwal.",
-    ),
-    (
-        "verity tech stack",
-        "verity stack: Python 3.11+, pydantic v2 (models with extra=forbid), "
-        "typer (CLI), httpx (Walrus HTTP), python-dotenv (.env loading), "
-        "memwal SDK (MemWalSync). PyPI: walrus-verity. "
-        "Optional: pip install 'walrus-verity[memwal]' for MemWal support. "
-        "Build: hatchling, uv for dev. CI: GitHub Actions matrix on Python 3.11/3.12/3.13.",
-    ),
-    (
-        "verity current status",
-        "verity 0.1.3 is live on PyPI as walrus-verity. "
-        "91 tests, 96% coverage, 85% branch coverage minimum enforced. "
-        "Submitted to Sui Overflow hackathon, Walrus track. "
-        "Features: core models, registry I/O, validation, fail-closed releases, "
-        "Walrus backend, MemWal backend (Option A), VeritySession Python API, full CLI, "
-        "LLM-agnostic agent skill (plugins/verity-agent/SKILL.md).",
-    ),
-    (
-        "verity key design decisions",
-        "Key verity decisions: (1) MemWal Option A — store blobs on Walrus directly "
-        "(unencrypted), use MemWal only for semantic discovery; avoids SEAL encryption "
-        "making direct Walrus fetch return ciphertext. "
-        "(2) Canonical JSON — sorted keys, compact separators, no trailing newline, "
-        "allow_nan=False — ensures deterministic blob IDs. "
-        "(3) Fail-closed releases — all verified claims need passing tests with passed "
-        "evidence, no partial releases. "
-        "(4) load_dotenv() deferred to CLI @app.callback() — avoids polluting test env.",
-    ),
-    (
-        "verity repo layout",
-        "verity repository layout: "
-        "src/verity/ — core package (models, registry, validate, release, walrus, memwal, session, site, cli/). "
-        "tests/ — pytest suite (test_models, test_cli, test_walrus, test_memwal, test_release, test_session, test_validate, test_site). "
-        "docs/ — cli.md, python-api.md, schema.md, walrus.md, memwal.md, multi-agent.md. "
-        "plugins/verity-agent/ — SKILL.md + AGENT_PROMPT.md (LLM-agnostic agent skill). "
-        "examples/ — demo_multi_agent.py (two-agent handoff demo). "
-        "scripts/ — store_project_context.py (this file). "
-        "verity.json — verity's own proof chain (dogfooding).",
-    ),
-]
+REGISTRY_PATH = Path("verity.json")
 
 
 def main() -> None:
@@ -105,6 +46,19 @@ def main() -> None:
         print("ERROR: MEMWAL_ACCOUNT_ID not set — add it to .env or export it")
         raise SystemExit(1)
 
+    if not REGISTRY_PATH.exists():
+        print(f"ERROR: {REGISTRY_PATH} not found — run from the repo root")
+        raise SystemExit(1)
+
+    data = json.loads(REGISTRY_PATH.read_text(encoding="utf-8"))
+    repo_id = data.get("repo_id", "unknown")
+    entries = data.get("context", [])
+
+    if not entries:
+        print(f"No context entries in {REGISTRY_PATH}.")
+        print("Add some with: verity context set KEY 'your narrative here'")
+        raise SystemExit(0)
+
     print(f"Connecting to MemWal ({server_url}) namespace={NAMESPACE!r} ...")
     client = MemWalSync.create(
         key=key,
@@ -113,12 +67,21 @@ def main() -> None:
         namespace=NAMESPACE,
     )
 
-    for label, content in MEMORIES:
-        print(f"  storing: {label!r} ...", end=" ", flush=True)
-        client.remember_and_wait(content, namespace=NAMESPACE)
+    stored = 0
+    for entry in entries:
+        key_name = entry.get("key", "")
+        value = entry.get("value", "")
+        if not key_name or not value:
+            continue
+        print(f"  storing: {key_name!r} ...", end=" ", flush=True)
+        client.remember_and_wait(
+            f"verity context key={key_name} repo={repo_id}: {value}",
+            namespace=NAMESPACE,
+        )
         print("OK")
+        stored += 1
 
-    print(f"\nStored {len(MEMORIES)} memories in namespace {NAMESPACE!r}.")
+    print(f"\nStored {stored} context entries for repo={repo_id!r}.")
     print("Any agent can now recall('verity') and arrive with full project context.")
 
 

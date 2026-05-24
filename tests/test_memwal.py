@@ -140,6 +140,55 @@ def test_store_walrus_error_raises(minimal_registry) -> None:
         backend.store(b"data")
 
 
+def test_store_context_entries_sent_to_memwal() -> None:
+    from verity.models import ContextEntry, Registry
+    from verity.registry import canonical_json
+
+    reg = Registry(
+        repo_id="repo:ctx-test",
+        context=[
+            ContextEntry(key="arch", value="5-layer chain"),
+            ContextEntry(key="why", value="agents need memory"),
+        ],
+    )
+    backend, mock_memwal, _ = _backend()
+    backend.store(canonical_json(reg).encode())
+    calls = [c.args[0] for c in mock_memwal.remember_and_wait.call_args_list]
+    assert any("arch" in c and "5-layer chain" in c for c in calls)
+    assert any("why" in c and "agents need memory" in c for c in calls)
+
+
+def test_store_context_includes_repo_id() -> None:
+    from verity.models import ContextEntry, Registry
+    from verity.registry import canonical_json
+
+    reg = Registry(
+        repo_id="repo:myproject",
+        context=[ContextEntry(key="stack", value="python + walrus")],
+    )
+    backend, mock_memwal, _ = _backend()
+    backend.store(canonical_json(reg).encode())
+    calls = [c.args[0] for c in mock_memwal.remember_and_wait.call_args_list]
+    context_calls = [c for c in calls if "stack" in c]
+    assert context_calls
+    assert "repo:myproject" in context_calls[0]
+
+
+def test_store_context_nonfatal_on_memwal_error() -> None:
+    from memwal import MemWalError as SdkError
+    from verity.models import ContextEntry, Registry
+    from verity.registry import canonical_json
+
+    reg = Registry(
+        repo_id="repo:test",
+        context=[ContextEntry(key="k", value="v")],
+    )
+    backend, mock_memwal, _ = _backend()
+    mock_memwal.remember_and_wait.side_effect = SdkError("relayer down")
+    result = backend.store(canonical_json(reg).encode())
+    assert result == FAKE_BLOB_ID
+
+
 def test_store_memwal_error_is_nonfatal(minimal_registry) -> None:
     from memwal import MemWalError as SdkError
 

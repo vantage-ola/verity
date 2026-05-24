@@ -96,11 +96,19 @@ class PushRecord(BaseModel):
     backend: Literal["walrus", "memwal"] = "walrus"
 
 
+class ContextEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    key: str
+    value: str
+
+
 class Registry(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     schema_version: str = "0.1.0"
     repo_id: str
+    context: list[ContextEntry] = []
     features: list[Feature] = []
     claims: list[Claim] = []
     tests: list[Test] = []

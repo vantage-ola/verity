@@ -93,8 +93,14 @@ def generate_html(registry: Registry) -> str:
             f'{i}. [{p.backend}] {p.timestamp} — <code>{p.blob_id}</code>'
         )
 
+    context = [
+        f"<strong>{e.key}</strong>: {e.value}"
+        for e in registry.context
+    ]
+
     body = (
-        _section("Features", features)
+        _section("Project Context", context)
+        + _section("Features", features)
         + _section("Claims", claims)
         + _section("Tests", tests)
         + _section("Evidence", evidence)

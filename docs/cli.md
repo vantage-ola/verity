@@ -189,3 +189,57 @@ verity site
 ```
 
 The URL format depends on whether you're using testnet or mainnet — it reads `WALRUS_AGGREGATOR_URL` from the environment (same env var used by `verity push`).
+
+---
+
+## `verity context`
+
+Manage named narrative context entries stored inside `verity.json`. Context entries are free-form key/value notes — architecture decisions, current focus areas, design rationale — that travel with the proof chain and are automatically stored in MemWal when you push via `verity push --backend memwal`.
+
+```bash
+verity context set KEY VALUE [--dir DIRECTORY]
+verity context list           [--dir DIRECTORY]
+verity context remove KEY     [--dir DIRECTORY]
+```
+
+### `verity context set`
+
+Upsert a context entry. If `KEY` already exists it is overwritten; otherwise a new entry is appended.
+
+```bash
+verity context set architecture "5-layer proof chain: feature → claim → test → evidence → release"
+verity context set decisions "chose MemWal Option A — blobs on Walrus directly, MemWal for discovery only"
+verity context set focus "current sprint: proof-chain diffing and CI/CD integration"
+# Set: architecture
+```
+
+### `verity context list`
+
+Print all context entries for the registry.
+
+```bash
+verity context list
+# architecture: 5-layer proof chain: feature → claim → test → evidence → release
+# decisions: chose MemWal Option A — blobs on Walrus directly, MemWal for discovery only
+# focus: current sprint: proof-chain diffing and CI/CD integration
+```
+
+### `verity context remove`
+
+Delete a context entry by key. Exits non-zero if the key is not found.
+
+```bash
+verity context remove focus
+# Removed: focus
+```
+
+### How context flows into MemWal
+
+When you run `verity push --backend memwal`, each context entry is stored as a separate MemWal memory alongside the registry pointer. Any agent with MemWal access can then retrieve it:
+
+```
+verity context key=architecture repo=repo:my-project: 5-layer proof chain…
+verity context key=decisions repo=repo:my-project: chose MemWal Option A…
+```
+
+This means agents can `recall("verity architecture")` or `recall("verity decisions")` and arrive with the relevant context without any manual briefing.

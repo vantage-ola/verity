@@ -145,3 +145,41 @@ def test_multiple_pushes_log(tmp_session: VeritySession) -> None:
     assert len(records) == 2
     assert records[0].blob_id == "blob-1"
     assert records[1].blob_id == "blob-2"
+
+
+# ---------------------------------------------------------------------------
+# context
+# ---------------------------------------------------------------------------
+
+def test_set_context_persists(tmp_session: VeritySession) -> None:
+    tmp_session.set_context("arch", "5-layer proof chain")
+    assert tmp_session.get_context("arch") == "5-layer proof chain"
+
+
+def test_set_context_upserts(tmp_session: VeritySession) -> None:
+    tmp_session.set_context("arch", "old")
+    tmp_session.set_context("arch", "new")
+    assert tmp_session.get_context("arch") == "new"
+    assert len(tmp_session.registry().context) == 1
+
+
+def test_get_context_missing_returns_none(tmp_session: VeritySession) -> None:
+    assert tmp_session.get_context("missing") is None
+
+
+def test_remove_context_returns_true_when_found(tmp_session: VeritySession) -> None:
+    tmp_session.set_context("k", "v")
+    assert tmp_session.remove_context("k") is True
+    assert tmp_session.get_context("k") is None
+
+
+def test_remove_context_returns_false_when_missing(tmp_session: VeritySession) -> None:
+    assert tmp_session.remove_context("nonexistent") is False
+
+
+def test_context_survives_round_trip(tmp_session: VeritySession) -> None:
+    tmp_session.set_context("decisions", "chose Option A for MemWal")
+    tmp_session.set_context("stack", "python + walrus + pydantic")
+    reg = tmp_session.registry()
+    assert len(reg.context) == 2
+    assert reg.context[1].key == "stack"

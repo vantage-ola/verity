@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from verity.backends import StorageBackend
-from verity.models import Claim, Evidence, Feature, PushRecord, Registry, Release, Test
+from verity.models import Claim, ContextEntry, Evidence, Feature, PushRecord, Registry, Release, Test
 from verity.registry import canonical_json, load_registry, registry_path, save_registry
 from verity.release import VerityReleaseError, create_release
 from verity.validate import validate
@@ -177,6 +177,36 @@ class VeritySession:
     def log(self) -> list[PushRecord]:
         """Return all push records for this registry."""
         return self._load().pushes
+
+    # --- context ---
+
+    def set_context(self, key: str, value: str) -> None:
+        """Upsert a named context entry (stores narrative project knowledge)."""
+        registry = self._load()
+        for entry in registry.context:
+            if entry.key == key:
+                entry.value = value
+                self._save(registry)
+                return
+        registry.context.append(ContextEntry(key=key, value=value))
+        self._save(registry)
+
+    def get_context(self, key: str) -> str | None:
+        """Return the value for a context entry, or None if not found."""
+        for entry in self._load().context:
+            if entry.key == key:
+                return entry.value
+        return None
+
+    def remove_context(self, key: str) -> bool:
+        """Remove a context entry by key. Returns True if it existed."""
+        registry = self._load()
+        before = len(registry.context)
+        registry.context = [e for e in registry.context if e.key != key]
+        if len(registry.context) < before:
+            self._save(registry)
+            return True
+        return False
 
     # --- read helpers ---
 

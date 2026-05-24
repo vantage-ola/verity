@@ -1,6 +1,6 @@
 from verity.backends import StorageBackend
 from verity.memwal import MemWalBackend
-from verity.models import Claim, Evidence, Feature, PushRecord, Registry, Release, Test
+from verity.models import Claim, ContextEntry, Evidence, Feature, PushRecord, Registry, Release, Test
 from verity.registry import load_registry, save_registry
 from verity.session import VeritySession
 from verity.site import generate_html
@@ -11,6 +11,7 @@ __all__ = [
     "Registry",
     "Feature",
     "Claim",
+    "ContextEntry",
     "Test",
     "Evidence",
     "Release",

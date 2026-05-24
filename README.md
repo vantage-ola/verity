@@ -78,7 +78,7 @@ $ verity log
 
 | Topic | |
 |---|---|
-| [CLI Reference](docs/cli.md) | All commands: `init`, `add`, `validate`, `release`, `push`, `pull`, `log`, `site` |
+| [CLI Reference](docs/cli.md) | All commands: `init`, `add`, `validate`, `release`, `push`, `pull`, `log`, `site`, `context` |
 | [Python API](docs/python-api.md) | `VeritySession`, low-level functions, custom backends |
 | [Schema Reference](docs/schema.md) | `verity.json` fields, ID prefixes, status values, validation rules |
 | [Walrus Setup](docs/walrus.md) | Testnet, mainnet, custom endpoints |

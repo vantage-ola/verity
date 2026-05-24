@@ -122,9 +122,12 @@ class MemWalBackend:
 
         # Register semantic pointer so agents can recall("verity registry for repo:X")
         try:
-            repo_id = json.loads(content).get("repo_id", "unknown")
+            data = json.loads(content)
+            repo_id = data.get("repo_id", "unknown")
+            context_entries = data.get("context", [])
         except Exception:
             repo_id = "unknown"
+            context_entries = []
 
         try:
             self._client.remember_and_wait(
@@ -133,6 +136,18 @@ class MemWalBackend:
             )
         except _SdkError:
             pass  # non-fatal — blob is already on Walrus
+
+        for entry in context_entries:
+            key = entry.get("key", "")
+            value = entry.get("value", "")
+            if key and value:
+                try:
+                    self._client.remember_and_wait(
+                        f"verity context key={key} repo={repo_id}: {value}",
+                        namespace=self.namespace,
+                    )
+                except _SdkError:
+                    pass  # non-fatal
 
         return blob_id
 

@@ -273,6 +273,65 @@ def test_pull_creates_parent_directory(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
+# context
+# ---------------------------------------------------------------------------
+
+def test_context_set_and_list(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner.invoke(app, ["init"])
+    result = runner.invoke(app, ["context", "set", "arch", "5-layer proof chain"])
+    assert result.exit_code == 0
+    assert "Set" in result.stdout
+    result = runner.invoke(app, ["context", "list"])
+    assert "arch" in result.stdout
+    assert "5-layer proof chain" in result.stdout
+
+
+def test_context_set_upserts(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["context", "set", "arch", "old value"])
+    runner.invoke(app, ["context", "set", "arch", "new value"])
+    result = runner.invoke(app, ["context", "list"])
+    assert "new value" in result.stdout
+    assert "old value" not in result.stdout
+
+
+def test_context_remove(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["context", "set", "arch", "some text"])
+    result = runner.invoke(app, ["context", "remove", "arch"])
+    assert result.exit_code == 0
+    assert "Removed" in result.stdout
+    result = runner.invoke(app, ["context", "list"])
+    assert "arch" not in result.stdout
+
+
+def test_context_remove_missing_key(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner.invoke(app, ["init"])
+    result = runner.invoke(app, ["context", "remove", "nonexistent"])
+    assert result.exit_code == 1
+
+
+def test_context_list_empty(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner.invoke(app, ["init"])
+    result = runner.invoke(app, ["context", "list"])
+    assert result.exit_code == 0
+    assert "No context entries" in result.stdout
+
+
+def test_context_persisted_in_json(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["context", "set", "decisions", "chose Option A"])
+    data = json.loads((tmp_path / "verity.json").read_text())
+    assert any(e["key"] == "decisions" for e in data["context"])
+
+
+# ---------------------------------------------------------------------------
 # log
 # ---------------------------------------------------------------------------
 
