@@ -18,7 +18,11 @@ function SectionHeader({ index, label }: { index: string; label: string }) {
 function CopyChip({ text }: { text: string }) {
   const [copied, setCopied] = useState(false)
   const onCopy = () => {
-    try { navigator.clipboard?.writeText(text) } catch {}
+    try {
+      navigator.clipboard?.writeText(text)
+    } catch (err) {
+      console.error('Failed to copy text: ', err)
+    }
     setCopied(true)
     setTimeout(() => setCopied(false), 1400)
   }
@@ -202,8 +206,8 @@ export function Landing({ onDocs }: { onDocs: () => void }) {
         <nav style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
           <div className="v-nav-text">
             <button onClick={onDocs} className="v-overline" style={{ background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'none', padding: 0 }}>Docs</button>
-            <a href="https://github.com/vantage-ola/verity" className="v-overline" style={{ textDecoration: 'none' }}>GitHub</a>
-            <a href="https://pypi.org/project/walrus-verity/" className="v-overline" style={{ textDecoration: 'none' }}>PyPI</a>
+            <a href="https://github.com/vantage-ola/verity" className="v-overline" style={{ textDecoration: 'none' }} target="_blank" rel="noopener noreferrer">GitHub</a>
+            <a href="https://pypi.org/project/walrus-verity/" className="v-overline" style={{ textDecoration: 'none' }} target="_blank" rel="noopener noreferrer">PyPI</a>
           </div>
           <a href="#install" className="v-btn v-btn-primary">Install →</a>
         </nav>
@@ -355,10 +359,10 @@ export function Landing({ onDocs }: { onDocs: () => void }) {
             </span>
           </div>
           <div className="v-footer-links">
-            <a href="https://github.com/vantage-ola/verity" className="v-overline" style={{ textDecoration: 'none' }}>GitHub</a>
-            <a href="https://pypi.org/project/walrus-verity/" className="v-overline" style={{ textDecoration: 'none' }}>PyPI</a>
+            <a href="https://github.com/vantage-ola/verity" className="v-overline" style={{ textDecoration: 'none' }} target="_blank" rel="noopener noreferrer">GitHub</a>
+            <a href="https://pypi.org/project/walrus-verity/" className="v-overline" style={{ textDecoration: 'none' }} target="_blank" rel="noopener noreferrer">PyPI</a>
             <button onClick={onDocs} className="v-overline" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Docs</button>
-            <a href="https://github.com/vantage-ola/verity/blob/main/LICENSE" className="v-overline" style={{ textDecoration: 'none' }}>License · MIT</a>
+            <a href="https://github.com/vantage-ola/verity/blob/main/LICENSE" className="v-overline" style={{ textDecoration: 'none' }} target="_blank" rel="noopener noreferrer">License · MIT</a>
           </div>
         </div>
       </footer>
