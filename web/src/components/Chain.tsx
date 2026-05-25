@@ -22,7 +22,6 @@ export function VerityChain() {
   }, [paused])
 
   const activeIdx = current < NODES.length ? current : -1
-  const display = hover != null ? hover : activeIdx
 
   return (
     <div
