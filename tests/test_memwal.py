@@ -174,6 +174,14 @@ def test_store_context_includes_repo_id() -> None:
     assert "repo:myproject" in context_calls[0]
 
 
+def test_store_non_json_content_does_not_raise() -> None:
+    backend, mock_memwal, _ = _backend()
+    result = backend.store(b"not valid json at all")
+    assert result == FAKE_BLOB_ID
+    text = mock_memwal.remember_and_wait.call_args.args[0]
+    assert "unknown" in text
+
+
 def test_store_context_nonfatal_on_memwal_error() -> None:
     from memwal import MemWalError as SdkError
     from verity.models import ContextEntry, Registry
