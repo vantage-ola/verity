@@ -1024,6 +1024,7 @@ dependencies = [
 
 [package.optional-dependencies]
 dev = [
+    { name = "mcp" },
     { name = "memwal" },
     { name = "pytest" },
     { name = "pytest-cov" },
@@ -1038,6 +1039,7 @@ memwal = [
 [package.metadata]
 requires-dist = [
     { name = "httpx", specifier = ">=0.27" },
+    { name = "mcp", marker = "extra == 'dev'", specifier = ">=1.0" },
     { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.27.1" },
     { name = "memwal", marker = "extra == 'dev'", specifier = ">=0.1.0" },
     { name = "memwal", marker = "extra == 'memwal'", specifier = ">=0.1.0" },
