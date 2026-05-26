@@ -272,6 +272,37 @@ function CliRef() {
         ]}
       />
       <P>Running the command a second time is safe — it detects the existing skill block and skips.</P>
+
+      <H2>MCP server</H2>
+      <P>Expose all verity tools natively to any MCP-compatible editor (Claude Code, Cursor, Windsurf, Codex). No subprocess — the editor calls the tools directly.</P>
+      <Code>
+        <span className="c-comm"># install with MCP support</span>{'\n'}
+        pip install <span className="c-str">"walrus-verity[mcp]"</span>{'\n\n'}
+        <span className="c-comm"># add to claude_mcp_config.json (or equivalent)</span>{'\n'}
+        {'{\n'}
+        {'  '}<span className="c-str">"mcpServers"</span>{': {\n'}
+        {'    '}<span className="c-str">"verity"</span>{': {\n'}
+        {'      '}<span className="c-str">"command"</span>{': '}<span className="c-str">"verity-mcp"</span>{',\n'}
+        {'      '}<span className="c-str">"env"</span>{': {\n'}
+        {'        '}<span className="c-str">"WALRUS_PUBLISHER_URL"</span>{': '}<span className="c-str">"https://publisher.walrus-testnet.walrus.space"</span>{'\n'}
+        {'      }\n'}
+        {'    }\n'}
+        {'  }\n'}
+        {'}'}
+      </Code>
+      <Table
+        headers={['MCP tool', 'Description']}
+        rows={[
+          ['verity_init', 'Create verity.json'],
+          ['verity_add_feature / claim / test / evidence', 'Add chain entities'],
+          ['verity_set_status', 'Promote status after chain is wired'],
+          ['verity_validate', 'Validate the full chain'],
+          ['verity_release', 'Fail-closed release'],
+          ['verity_push / pull', 'Walrus push and pull'],
+          ['verity_log', 'Push history'],
+          ['verity_status', 'Entity counts + validation summary'],
+        ]}
+      />
     </div>
   )
 }

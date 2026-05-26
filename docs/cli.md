@@ -295,3 +295,64 @@ verity install-skill --tool aider     # → CONVENTIONS.md
 ```
 
 Running the command a second time is safe — it detects the existing skill block and exits without duplicating it.
+
+
+---
+
+## MCP server (`verity-mcp`)
+
+Instead of the context skill, you can expose all verity tools natively via the Model Context Protocol. Any MCP-compatible editor (Claude Code, Cursor, Windsurf, Codex) can call these tools directly without running CLI subprocesses.
+
+### Install
+
+```bash
+pip install "walrus-verity[mcp]"
+```
+
+### Configure
+
+Add to `claude_mcp_config.json` (Claude Code), `.cursor/mcp.json` (Cursor), or equivalent:
+
+```json
+{
+  "mcpServers": {
+    "verity": {
+      "command": "verity-mcp",
+      "env": {
+        "WALRUS_PUBLISHER_URL": "https://publisher.walrus-testnet.walrus.space",
+        "WALRUS_AGGREGATOR_URL": "https://aggregator.walrus-testnet.walrus.space"
+      }
+    }
+  }
+}
+```
+
+Or with `uvx` (no install needed):
+
+```json
+{
+  "mcpServers": {
+    "verity": {
+      "command": "uvx",
+      "args": ["verity-agent"]
+    }
+  }
+}
+```
+
+### Available tools
+
+| Tool | Description |
+|------|-------------|
+| `verity_init` | Create `verity.json` |
+| `verity_add_feature` | Add a Feature (`feat:`) |
+| `verity_add_claim` | Add a Claim (`clm:`) |
+| `verity_add_test` | Add a Test (`tst:`) |
+| `verity_add_evidence` | Add Evidence (`evd:`) |
+| `verity_set_status` | Promote status after chain is wired |
+| `verity_validate` | Validate the full chain |
+| `verity_release` | Create a fail-closed release |
+| `verity_push` | Push to Walrus, returns `blob_id` |
+| `verity_pull` | Pull from Walrus by `blob_id` |
+| `verity_log` | Show push history |
+| `verity_status` | Entity counts + validation summary |

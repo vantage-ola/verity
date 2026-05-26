@@ -40,7 +40,7 @@ pip install "walrus-verity[memwal]"
 
 ### AI coding assistant integration
 
-After installing, teach your AI tool the verity proof chain model, CLI, and API in one command:
+**Context skill** — teach your AI tool the verity proof chain model, CLI, and API:
 
 ```bash
 verity install-skill                    # Claude Code (global)
@@ -49,6 +49,30 @@ verity install-skill --tool windsurf    # Windsurf → .windsurfrules
 verity install-skill --tool codex       # OpenAI Codex → AGENTS.md
 verity install-skill --tool aider       # Aider → CONVENTIONS.md
 ```
+
+**MCP server** — expose all verity tools natively to any MCP-compatible editor:
+
+```bash
+pip install "walrus-verity[mcp]"
+```
+
+Add to your `claude_mcp_config.json` (or equivalent):
+
+```json
+{
+  "mcpServers": {
+    "verity": {
+      "command": "verity-mcp",
+      "env": {
+        "WALRUS_PUBLISHER_URL": "https://publisher.walrus-testnet.walrus.space",
+        "WALRUS_AGGREGATOR_URL": "https://aggregator.walrus-testnet.walrus.space"
+      }
+    }
+  }
+}
+```
+
+Available MCP tools: `verity_init`, `verity_add_feature`, `verity_add_claim`, `verity_add_test`, `verity_add_evidence`, `verity_set_status`, `verity_validate`, `verity_release`, `verity_push`, `verity_pull`, `verity_log`, `verity_status`.
 
 ---
 
@@ -100,6 +124,7 @@ $ verity log
 | Topic | |
 |---|---|
 | [CLI Reference](docs/cli.md) | All commands: `init`, `add`, `validate`, `release`, `push`, `pull`, `log`, `site`, `context`, `install-skill` |
+| [MCP Server](plugins/verity-agent/README.md) | `verity-mcp` — expose verity tools to any MCP-compatible editor |
 | [Python API](docs/python-api.md) | `VeritySession`, low-level functions, custom backends |
 | [Schema Reference](docs/schema.md) | `verity.json` fields, ID prefixes, status values, validation rules |
 | [Walrus Setup](docs/walrus.md) | Testnet, mainnet, custom endpoints |

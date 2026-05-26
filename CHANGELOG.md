@@ -11,6 +11,45 @@ This project uses [semantic versioning](https://semver.org/).
 
 ---
 
+## [0.1.6] — 2026-05-26
+
+### Added
+- **MCP server** (`src/verity/mcp_server.py`) — exposes all proof-chain operations as MCP tools (`verity_init`, `verity_add_feature`, `verity_add_claim`, `verity_add_test`, `verity_add_evidence`, `verity_set_status`, `verity_validate`, `verity_release`, `verity_push`, `verity_pull`, `verity_log`, `verity_status`); compatible with any MCP-capable editor (Claude Code, Cursor, Windsurf, Codex)
+- `verity_set_status` MCP tool — promotes entity statuses after the chain is wired; validates before saving so premature promotions are rejected
+- `verity-mcp` entry point — available after `pip install "walrus-verity[mcp]"`
+- `walrus-verity[mcp]` optional dependency group (`mcp>=1.0`)
+- `plugins/verity-agent/` — standalone `verity-agent` package that re-exports from `verity.mcp_server`; installable independently via `pip install verity-agent` or `uvx verity-agent`
+- 24 tests in `tests/test_mcp_server.py` covering all MCP tools, two-phase status promotion, mock backends, env-var Walrus wiring, and error paths
+- MCP server section added to `docs/cli.md` and `web/src/components/Docs.tsx`
+- MCP server section added to `README.md` with config examples for Claude Code and Cursor
+
+---
+
+## [0.1.5] — 2026-05-25
+
+### Added
+- `verity install-skill` command — installs the verity context skill into AI coding assistants; Claude Code gets a global `@path` reference in `~/.claude/CLAUDE.md`; Cursor, Windsurf, Codex, Aider get the skill injected into their project config files; idempotent (safe to run multiple times)
+- `src/verity/skills/SKILL.md` — full verity reference skill bundled with the package; covers core concept, CLI, Python API, backends, multi-agent patterns, env vars, and the two-phase CLI status workflow
+- `pyproject.toml`: `artifacts = ["src/verity/skills/*.md"]` so hatchling includes the skill file in the wheel
+- `codecov.yml` — explicit Codecov config: project target `auto` with 1% threshold, patch target 85% with 5% threshold
+- PyPI downloads badge in `README.md`
+- `verity install-skill` section in `docs/cli.md` and `web/src/components/Docs.tsx`
+- 12 tests in `tests/test_cli.py` covering install-skill for all five tools, idempotency, unknown tool error, missing skill file, and content validation
+- `feat:install-skill` proof chain entry in `verity.json`
+
+### Changed
+- Two-phase CLI status workflow documented across `README.md`, `docs/cli.md`, `docs/python-api.md`, and `web/src/components/Docs.tsx` — build the full chain with neutral statuses first, then promote (`verified`, `passing`, `passed`) after everything is linked
+- `SKILL.md` updated with "Correct order when building the chain via CLI" section explaining why neutral-first is required
+- Section 02 ("In code") on the landing page now shows the evidence step (was missing)
+- External links (GitHub, PyPI, License) open in a new tab
+
+### Fixed
+- Removed unused `const display` variable in `web/src/components/Chain.tsx` (TypeScript build error)
+- Removed invalid `server.historyApiFallback` from `web/vite.config.ts` (webpack-only option; Vite's default `appType: 'spa'` handles SPA routing)
+- Removed unused `button.tsx` and `utils.ts` shadcn scaffold files (were never committed or used; CSS bundle shrank from 31.8 kB to 21.3 kB)
+
+---
+
 ## [0.1.4] — 2026-05-23
 
 ### Added
@@ -146,7 +185,9 @@ Initial release. Full Phase 1–3 implementation.
 
 ---
 
-[Unreleased]: https://github.com/vantage-ola/verity/compare/v0.1.4...HEAD
+[Unreleased]: https://github.com/vantage-ola/verity/compare/v0.1.6...HEAD
+[0.1.6]: https://github.com/vantage-ola/verity/compare/v0.1.5...v0.1.6
+[0.1.5]: https://github.com/vantage-ola/verity/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/vantage-ola/verity/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/vantage-ola/verity/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/vantage-ola/verity/compare/v0.1.1...v0.1.2

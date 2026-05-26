@@ -1,0 +1,23 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "verity-agent"
+version = "0.1.0"
+description = "MCP server for the verity proof-chain registry"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "vantage-ola" }]
+requires-python = ">=3.11"
+keywords = ["mcp", "verity", "walrus", "proof-chain", "ai-agent"]
+dependencies = [
+    "walrus-verity>=0.1.5",
+    "mcp>=1.0",
+]
+
+[project.scripts]
+verity-mcp = "verity_agent.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["verity_agent"]
