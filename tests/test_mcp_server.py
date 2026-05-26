@@ -91,6 +91,14 @@ def test_add_claim(tmp_path):
     assert "clm:auth.t1" in result
 
 
+def test_add_claim_bad_prefix(tmp_path):
+    rp = _reg_path(tmp_path)
+    verity_init(registry_path=rp)
+    verity_add_feature("feat:auth", "Auth", registry_path=rp)
+    result = verity_add_claim("bad:auth.t1", "Login works", feature_id="feat:auth", registry_path=rp)
+    assert "Error" in result
+
+
 def test_add_test(tmp_path):
     rp = _reg_path(tmp_path)
     verity_init(registry_path=rp)
@@ -98,6 +106,13 @@ def test_add_test(tmp_path):
     verity_add_claim("clm:auth.t1", "Login works", feature_id="feat:auth", registry_path=rp)
     result = verity_add_test("tst:auth.unit", claim_id="clm:auth.t1", kind="unit", path="tests/test_auth.py", registry_path=rp)
     assert "tst:auth.unit" in result
+
+
+def test_add_test_bad_prefix(tmp_path):
+    rp = _reg_path(tmp_path)
+    verity_init(registry_path=rp)
+    result = verity_add_test("bad:unit", claim_id="clm:auth.t1", registry_path=rp)
+    assert "Error" in result
 
 
 def test_add_evidence(tmp_path):
@@ -108,6 +123,13 @@ def test_add_evidence(tmp_path):
     verity_add_test("tst:auth.unit", claim_id="clm:auth.t1", kind="unit", path="t.py", registry_path=rp)
     result = verity_add_evidence("evd:auth.ci", test_id="tst:auth.unit", artifact_path="a.json", registry_path=rp)
     assert "evd:auth.ci" in result
+
+
+def test_add_evidence_bad_prefix(tmp_path):
+    rp = _reg_path(tmp_path)
+    verity_init(registry_path=rp)
+    result = verity_add_evidence("bad:ci", test_id="tst:auth.unit", artifact_path="a.json", registry_path=rp)
+    assert "Error" in result
 
 
 # ---------------------------------------------------------------------------
@@ -155,6 +177,19 @@ def test_validate_missing_file(tmp_path):
     assert "Error" in result
 
 
+def test_validate_returns_errors(tmp_path):
+    rp = _reg_path(tmp_path)
+    verity_init(registry_path=rp)
+    verity_add_feature("feat:x", "X", registry_path=rp)
+    verity_add_claim("clm:x.t1", "X works", feature_id="feat:x", registry_path=rp)
+    # break the registry: remove the feature so claim has dangling reference
+    data = json.loads(Path(rp).read_text())
+    data["features"] = []
+    Path(rp).write_text(json.dumps(data))
+    result = verity_validate(registry_path=rp)
+    assert "Errors:" in result
+
+
 # ---------------------------------------------------------------------------
 # verity_release
 # ---------------------------------------------------------------------------
@@ -165,6 +200,11 @@ def test_release_success(tmp_path):
     result = verity_release("1.0.0", registry_path=rp)
     assert "rel:1.0.0" in result
     assert "1 claim" in result
+
+
+def test_release_missing_file(tmp_path):
+    result = verity_release("1.0.0", registry_path=str(tmp_path / "missing.json"))
+    assert "Error" in result
 
 
 def test_release_fails_without_verified_claims(tmp_path):
@@ -209,6 +249,11 @@ def test_push_with_mock_backend(tmp_path, monkeypatch):
 # ---------------------------------------------------------------------------
 # verity_log
 # ---------------------------------------------------------------------------
+
+
+def test_log_missing_file(tmp_path):
+    result = verity_log(registry_path=str(tmp_path / "missing.json"))
+    assert "Error" in result
 
 
 def test_log_empty(tmp_path):

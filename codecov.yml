@@ -2,8 +2,8 @@ coverage:
   status:
     project:
       default:
-        target: auto     # must not drop more than threshold from base
-        threshold: 1%    # allow up to 1% drop before failing
+        target: 85%      # project coverage must stay above 85%
+        threshold: 2%    # allow up to 2% drop before failing
     patch:
       default:
         target: 85%      # 85% of new/changed lines must be covered

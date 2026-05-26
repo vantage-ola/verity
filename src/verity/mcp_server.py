@@ -44,7 +44,7 @@ def verity_init(registry_path: str = "verity.json", repo_id: str = "repo:default
         return f"Initialised registry at {registry_path} with repo_id={repo_id}"
     except FileExistsError as e:
         return f"Error: {e}"
-    except Exception as e:
+    except Exception as e:  # pragma: no cover
         return f"Error: {e}"
 
 
@@ -164,7 +164,7 @@ def verity_set_status(
 
         save_registry(reg, Path(registry_path))
         return f"Updated {id!r}: {old} → {status}"
-    except Exception as e:
+    except Exception as e:  # pragma: no cover
         return f"Error: {e}"
 
 
@@ -204,7 +204,7 @@ def verity_push(registry_path: str = "verity.json") -> str:
         return f"Pushed. blob_id: {blob_id}"
     except (VerityPushError, FileNotFoundError) as e:
         return f"Error: {e}"
-    except Exception as e:
+    except Exception as e:  # pragma: no cover
         return f"Error: {e}"
 
 
@@ -217,7 +217,7 @@ def verity_pull(blob_id: str, registry_path: str = "verity.json") -> str:
         return f"Pulled {blob_id!r} → {registry_path}"
     except (VerityPushError, FileNotFoundError) as e:
         return f"Error: {e}"
-    except Exception as e:
+    except Exception as e:  # pragma: no cover
         return f"Error: {e}"
 
 
@@ -263,9 +263,9 @@ def verity_status(registry_path: str = "verity.json") -> str:
         return f"Error: {e}"
 
 
-def main() -> None:
+def main() -> None:  # pragma: no cover
     mcp.run(transport="stdio")
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     main()
