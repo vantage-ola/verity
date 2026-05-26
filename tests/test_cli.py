@@ -357,6 +357,102 @@ def test_log_shows_entries(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> N
 
 
 # ---------------------------------------------------------------------------
+# install-skill
+# ---------------------------------------------------------------------------
+
+def test_install_skill_claude_creates_claude_md(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("pathlib.Path.home", lambda: tmp_path)
+    result = runner.invoke(app, ["install-skill"])
+    assert result.exit_code == 0
+    assert "Claude Code" in result.stdout
+    claude_md = tmp_path / ".claude" / "CLAUDE.md"
+    assert claude_md.exists()
+    assert "verity" in claude_md.read_text()
+
+
+def test_install_skill_claude_appends_to_existing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("pathlib.Path.home", lambda: tmp_path)
+    claude_md = tmp_path / ".claude" / "CLAUDE.md"
+    claude_md.parent.mkdir(parents=True)
+    claude_md.write_text("# existing content\n")
+    runner.invoke(app, ["install-skill"])
+    content = claude_md.read_text()
+    assert "existing content" in content
+    assert "verity" in content
+
+
+def test_install_skill_claude_idempotent(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("pathlib.Path.home", lambda: tmp_path)
+    runner.invoke(app, ["install-skill"])
+    result = runner.invoke(app, ["install-skill"])
+    assert result.exit_code == 0
+    assert "already installed" in result.stdout
+
+
+def test_install_skill_cursor(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    result = runner.invoke(app, ["install-skill", "--tool", "cursor"])
+    assert result.exit_code == 0
+    assert "cursor" in result.stdout
+    assert (tmp_path / ".cursorrules").exists()
+
+
+def test_install_skill_windsurf(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    result = runner.invoke(app, ["install-skill", "--tool", "windsurf"])
+    assert result.exit_code == 0
+    assert (tmp_path / ".windsurfrules").exists()
+
+
+def test_install_skill_codex(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    result = runner.invoke(app, ["install-skill", "--tool", "codex"])
+    assert result.exit_code == 0
+    assert (tmp_path / "AGENTS.md").exists()
+
+
+def test_install_skill_aider(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    result = runner.invoke(app, ["install-skill", "--tool", "aider"])
+    assert result.exit_code == 0
+    assert (tmp_path / "CONVENTIONS.md").exists()
+
+
+def test_install_skill_project_appends_to_existing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    target = tmp_path / ".cursorrules"
+    target.write_text("# existing rules\n")
+    runner.invoke(app, ["install-skill", "--tool", "cursor"])
+    content = target.read_text()
+    assert "existing rules" in content
+    assert "verity" in content
+
+
+def test_install_skill_project_idempotent(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner.invoke(app, ["install-skill", "--tool", "cursor"])
+    result = runner.invoke(app, ["install-skill", "--tool", "cursor"])
+    assert result.exit_code == 0
+    assert "already installed" in result.stdout
+
+
+def test_install_skill_unknown_tool(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    result = runner.invoke(app, ["install-skill", "--tool", "vscode"])
+    assert result.exit_code == 1
+    assert "Unknown tool" in result.stderr or "Unknown tool" in result.stdout
+
+
+def test_install_skill_content_includes_proof_chain(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner.invoke(app, ["install-skill", "--tool", "codex"])
+    content = (tmp_path / "AGENTS.md").read_text()
+    assert "feature" in content
+    assert "claim" in content
+    assert "evidence" in content
+
+
+# ---------------------------------------------------------------------------
 # helpers
 # ---------------------------------------------------------------------------
 

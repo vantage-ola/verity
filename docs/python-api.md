@@ -44,6 +44,8 @@ VeritySession(path="verity.json", *, backend: StorageBackend | None = None)
 
 ### Full example
 
+Unlike the CLI, the Python API **does not validate on each write** — statuses can be set at add time and the full chain is validated lazily when you call `validate()` or `push()`.
+
 ```python
 from verity import VeritySession, WalrusBackend
 
@@ -56,14 +58,14 @@ s.add_claim(
     "Summary is accurate",
     feature_id="feat:summarise",
     tier="T1",
-    status="verified",
+    status="verified",   # fine — validation is deferred
 )
 s.add_test(
     "tst:summarise.eval",
     claim_id="clm:summarise.t1",
     kind="integration",
     path="evals/test_summary.py",
-    status="passing",
+    status="passing",    # fine — validation is deferred
 )
 s.add_evidence(
     "evd:summarise.run1",
@@ -72,7 +74,7 @@ s.add_evidence(
     status="passed",
 )
 
-errors = s.validate()
+errors = s.validate()   # validation runs here — checks the full chain
 assert errors == [], errors
 
 release = s.release("1.0.0")

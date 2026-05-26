@@ -85,22 +85,25 @@ function QuickStart() {
       </Code>
 
       <H2>Build a proof chain</H2>
-      <P>Every entity links to the one before it: feature → claim → test → evidence.</P>
+      <P>Every entity links to the one before it: feature → claim → test → evidence. The CLI validates on every write — build with neutral statuses first, then promote them once the chain is fully linked.</P>
       <Code>
-        <span className="c-comm"># 1. a feature you intend to ship</span>{'\n'}
-        <span className="c-prompt">$ </span><span className="c-cmd">verity add feature</span> <span className="c-id">feat:auth</span> <span className="c-str">"User authentication"</span>{'\n\n'}
-        <span className="c-comm"># 2. a testable claim about it</span>{'\n'}
-        <span className="c-prompt">$ </span><span className="c-cmd">verity add claim</span> <span className="c-id">clm:auth.t1</span> <span className="c-str">"Login succeeds"</span> <span className="c-flag">--feature</span> <span className="c-id">feat:auth</span>{'\n\n'}
-        <span className="c-comm"># 3. the test that exercises the claim</span>{'\n'}
-        <span className="c-prompt">$ </span><span className="c-cmd">verity add test</span> <span className="c-id">tst:auth.unit</span> <span className="c-str">"Login unit test"</span> <span className="c-flag">--claim</span> <span className="c-id">clm:auth.t1</span> <span className="c-flag">--path</span> tests/test_auth.py <span className="c-flag">--status</span> passing{'\n\n'}
-        <span className="c-comm"># 4. evidence from a real run</span>{'\n'}
-        <span className="c-prompt">$ </span><span className="c-cmd">verity add evidence</span> <span className="c-id">evd:auth.ci</span> <span className="c-str">"CI run #1"</span> <span className="c-flag">--test</span> <span className="c-id">tst:auth.unit</span> <span className="c-flag">--status</span> passed
+        <span className="c-comm"># Phase 1 — build the chain (neutral statuses)</span>{'\n'}
+        <span className="c-prompt">$ </span><span className="c-cmd">verity add feature</span>  <span className="c-id">feat:auth</span>   <span className="c-str">"User authentication"</span>{'\n'}
+        <span className="c-prompt">$ </span><span className="c-cmd">verity add claim</span>    <span className="c-id">clm:auth.t1</span> <span className="c-str">"Login succeeds"</span>  <span className="c-flag">--feature</span> <span className="c-id">feat:auth</span>{'\n'}
+        <span className="c-prompt">$ </span><span className="c-cmd">verity add test</span>     <span className="c-id">tst:auth.unit</span> <span className="c-str">"Login unit test"</span> <span className="c-flag">--claim</span> <span className="c-id">clm:auth.t1</span> <span className="c-flag">--path</span> tests/test_auth.py{'\n'}
+        <span className="c-prompt">$ </span><span className="c-cmd">verity add evidence</span> <span className="c-id">evd:auth.ci</span>   <span className="c-str">"CI run #1"</span>       <span className="c-flag">--test</span> <span className="c-id">tst:auth.unit</span> <span className="c-flag">--artifact</span> ci.json <span className="c-flag">--status</span> passed{'\n\n'}
+        <span className="c-comm"># Phase 2 — promote statuses in verity.json, then validate</span>{'\n'}
+        <span className="c-comm"># set claim → verified, test → passing</span>{'\n'}
+        <span className="c-prompt">$ </span><span className="c-cmd">verity validate</span>{'\n'}
+        <span className="c-ok">OK</span>
       </Code>
 
-      <H2>Validate, release, push</H2>
+      <Callout>
+        <strong>Why two phases?</strong> A claim can only be <code>verified</code> once a linked test exists. A test can only be <code>passing</code> once linked passed evidence exists. Build links first, set statuses after — or use the <strong>Python API</strong> which defers validation until <code>validate()</code>.
+      </Callout>
+
+      <H2>Release and push</H2>
       <Code>
-        <span className="c-prompt">$ </span><span className="c-cmd">verity validate</span>{'\n'}
-        <span className="c-ok">OK</span>{'\n\n'}
         <span className="c-prompt">$ </span><span className="c-cmd">verity release</span> <span className="c-num">1.0.0</span>{'\n'}
         <span className="c-out">Released rel:1.0.0 at 2026-05-25T12:00:00Z</span>{'\n'}
         <span className="c-out">  claims: clm:auth.t1</span>{'\n\n'}
@@ -154,15 +157,17 @@ function CliRef() {
         rows={[
           ['--feature', 'required', 'Parent feature ID'],
           ['--tier', 'T1', 'Claim tier'],
-          ['--status', 'open', 'Lifecycle status'],
+          ['--status', 'open', 'Do not pass verified here — promote after test is linked'],
         ]}
       />
 
       <H2>verity add test</H2>
       <Code>verity add test ID TITLE <span className="c-flag">--claim</span> CLM_ID [<span className="c-flag">--kind</span> unit|integration] [<span className="c-flag">--path</span> PATH] [<span className="c-flag">--status</span> pending|passing|failing]</Code>
+      <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 16px' }}>Do not pass <InlineCode>--status passing</InlineCode> here — promote after evidence is linked.</p>
 
       <H2>verity add evidence</H2>
       <Code>verity add evidence ID TITLE <span className="c-flag">--test</span> TST_ID [<span className="c-flag">--artifact</span> PATH] [<span className="c-flag">--kind</span> TEXT] [<span className="c-flag">--status</span> passed|failed|collected]</Code>
+      <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 16px' }}>Evidence status can be set at add time — no downstream dependencies.</p>
 
       <H2>verity validate</H2>
       <P>Checks all links, duplicate IDs, and status consistency. Exits non-zero on any error.</P>
@@ -238,6 +243,35 @@ function CliRef() {
         <span className="c-prompt">$ </span>verity context list{'\n'}
         <span className="c-out">architecture: 5-layer proof chain</span>
       </Code>
+
+      <H2>verity install-skill</H2>
+      <P>Install the verity context skill into your AI coding assistant. The skill teaches the tool verity's proof chain model, CLI, Python API, and multi-agent patterns — so you don't have to re-explain them each session.</P>
+      <Code>
+        verity install-skill [<span className="c-flag">--tool</span> claude|cursor|windsurf|aider|codex]{'\n\n'}
+        <span className="c-comm"># Claude Code (global — all sessions)</span>{'\n'}
+        <span className="c-prompt">$ </span>verity install-skill{'\n'}
+        <span className="c-out">Installed for Claude Code → ~/.claude/CLAUDE.md</span>{'\n\n'}
+        <span className="c-comm"># Cursor, Windsurf, Codex, Aider (project-level — run in your repo)</span>{'\n'}
+        <span className="c-prompt">$ </span>verity install-skill <span className="c-flag">--tool</span> cursor{'\n'}
+        <span className="c-out">Installed for cursor → .cursorrules</span>{'\n'}
+        <span className="c-prompt">$ </span>verity install-skill <span className="c-flag">--tool</span> windsurf{'\n'}
+        <span className="c-out">Installed for windsurf → .windsurfrules</span>{'\n'}
+        <span className="c-prompt">$ </span>verity install-skill <span className="c-flag">--tool</span> codex{'\n'}
+        <span className="c-out">Installed for codex → AGENTS.md</span>{'\n'}
+        <span className="c-prompt">$ </span>verity install-skill <span className="c-flag">--tool</span> aider{'\n'}
+        <span className="c-out">Installed for aider → CONVENTIONS.md</span>
+      </Code>
+      <Table
+        headers={['Tool', 'Default', 'File written']}
+        rows={[
+          ['claude', 'yes', '~/.claude/CLAUDE.md (global)'],
+          ['cursor', '', '.cursorrules (project)'],
+          ['windsurf', '', '.windsurfrules (project)'],
+          ['codex', '', 'AGENTS.md (project)'],
+          ['aider', '', 'CONVENTIONS.md (project)'],
+        ]}
+      />
+      <P>Running the command a second time is safe — it detects the existing skill block and skips.</P>
     </div>
   )
 }

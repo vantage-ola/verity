@@ -154,3 +154,24 @@ Auto-loaded from `.env` via `python-dotenv` when present.
 - Agent B's push creates a **new** blob; it does not overwrite Agent A's
 - The chain file (`verity.json`) is local state; the blob on Walrus is the portable artifact
 - Tests live at `tests/` — run with `uv run pytest`
+
+## Correct order when building the chain via CLI
+
+verity validates on every write. **Always add entities with neutral statuses first, then promote statuses once the chain is fully linked.**
+
+```bash
+# correct — neutral statuses first
+verity add feature feat:x "My feature"
+verity add claim   clm:x.t1 "My claim"  --feature feat:x        # open (default)
+verity add test    tst:x.unit "My test" --claim clm:x.t1         # pending (default)
+verity add evidence evd:x.ci "CI run"   --test tst:x.unit        # collected (default)
+
+# then promote
+# patch verity.json or re-add with --status, then verity validate
+```
+
+**Never set a promoted status before the chain is wired:**
+- `--status verified` on a claim requires a linked passing test to already exist
+- `--status passing` on a test requires linked passed evidence to already exist
+
+Adding them out of order causes validation to fail and the write is rejected.
