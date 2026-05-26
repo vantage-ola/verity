@@ -443,6 +443,14 @@ def test_install_skill_unknown_tool(tmp_path: Path, monkeypatch: pytest.MonkeyPa
     assert "Unknown tool" in result.stderr or "Unknown tool" in result.stdout
 
 
+def test_install_skill_missing_skill_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr("verity.cli.main._SKILL_FILE", tmp_path / "nonexistent.md")
+    result = runner.invoke(app, ["install-skill", "--tool", "cursor"])
+    assert result.exit_code == 1
+    assert "not found" in result.stderr or "not found" in result.stdout
+
+
 def test_install_skill_content_includes_proof_chain(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     runner.invoke(app, ["install-skill", "--tool", "codex"])

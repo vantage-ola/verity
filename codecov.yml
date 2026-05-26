@@ -1,0 +1,14 @@
+coverage:
+  status:
+    project:
+      default:
+        target: auto     # must not drop more than threshold from base
+        threshold: 1%    # allow up to 1% drop before failing
+    patch:
+      default:
+        target: 85%      # 85% of new/changed lines must be covered
+        threshold: 5%    # allow down to 80% on small diffs
+
+comment:
+  layout: "reach,diff,flags,files"
+  behavior: default
