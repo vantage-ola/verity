@@ -122,10 +122,13 @@ function CodeSplit() {
               <span className="c-comm"># 3. attach the test that proves the claim</span>{'\n'}
               <span className="c-prompt">$ </span><span className="c-cmd">verity add test</span> <span className="c-id">tst:auth.unit</span> <span className="c-str">"Unit test"</span> <span className="c-flag">--claim</span> <span className="c-id">clm:auth.t1</span> <span className="c-flag">--path</span> <span className="c-str">tests/test_auth.py</span>{'\n'}
               {'\n'}
-              <span className="c-comm"># 4. cut a release, push the chain to Walrus</span>{'\n'}
+              <span className="c-comm"># 4. record the evidence from a real run</span>{'\n'}
+              <span className="c-prompt">$ </span><span className="c-cmd">verity add evidence</span> <span className="c-id">evd:auth.ci</span> <span className="c-str">"CI run"</span> <span className="c-flag">--test</span> <span className="c-id">tst:auth.unit</span> <span className="c-flag">--artifact</span> <span className="c-str">reports/ci.json</span> <span className="c-flag">--status</span> passed{'\n'}
+              {'\n'}
+              <span className="c-comm"># 5. cut a release, push the chain to Walrus</span>{'\n'}
               <span className="c-prompt">$ </span><span className="c-cmd">verity release</span> <span className="c-num">1.0.0</span>{'\n'}
               <span className="c-prompt">$ </span><span className="c-cmd">verity push</span> <span className="c-flag">--backend</span> memwal{'\n'}
-              <span className="c-out">  → blob: </span><span className="c-id">AbCdEfGh…</span> <span className="c-ok">✓ verified</span>
+              <span className="c-out">  → blob: </span><span className="c-id">AbCdEfGh…</span>
             </>
           )}
           {tab === 'json' && (
@@ -143,9 +146,10 @@ function CodeSplit() {
               {'      '}<span className="c-key">"text"</span>: <span className="c-str">"Login succeeds"</span> {'}'}{'\n'}
               {'  ],\n'}
               {'  '}<span className="c-key">"evidence"</span>: {'[\n'}
-              {'    {'} <span className="c-key">"test"</span>: <span className="c-id">"tst:auth.unit"</span>,{'\n'}
-              {'      '}<span className="c-key">"result"</span>: <span className="c-str">"pass"</span>,{'\n'}
-              {'      '}<span className="c-key">"hash"</span>: <span className="c-id">"sha256:7f3a…"</span> {'}'}{'\n'}
+              {'    {'} <span className="c-key">"id"</span>: <span className="c-id">"evd:auth.ci"</span>,{'\n'}
+              {'      '}<span className="c-key">"test_id"</span>: <span className="c-id">"tst:auth.unit"</span>,{'\n'}
+              {'      '}<span className="c-key">"artifact_path"</span>: <span className="c-str">"reports/ci.json"</span>,{'\n'}
+              {'      '}<span className="c-key">"status"</span>: <span className="c-str">"passed"</span> {'}'}{'\n'}
               {'  ],\n'}
               {'  '}<span className="c-key">"blob_id"</span>: <span className="c-id">"AbCdEfGh…"</span>{'\n'}
               {'}'}

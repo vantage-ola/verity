@@ -59,6 +59,7 @@ dev = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/verity"]
+artifacts = ["src/verity/skills/*.md"]
 
 # ---------------------------------------------------------------------------
 # pytest

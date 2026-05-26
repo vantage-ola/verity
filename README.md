@@ -38,25 +38,45 @@ pip install walrus-verity
 pip install "walrus-verity[memwal]"
 ```
 
+### AI coding assistant integration
+
+After installing, teach your AI tool the verity proof chain model, CLI, and API in one command:
+
+```bash
+verity install-skill                    # Claude Code (global)
+verity install-skill --tool cursor      # Cursor → .cursorrules
+verity install-skill --tool windsurf    # Windsurf → .windsurfrules
+verity install-skill --tool codex       # OpenAI Codex → AGENTS.md
+verity install-skill --tool aider       # Aider → CONVENTIONS.md
+```
+
 ---
 
 ## Quick start
 
+The CLI validates on every write, so build the chain with neutral statuses first, then promote them once everything is linked.
+
 ```bash
 verity init --repo-id repo:my-project
 
+# Phase 1 — build the chain (neutral statuses)
 verity add feature feat:auth "User authentication"
-verity add claim   clm:auth.t1 "Login succeeds" --feature feat:auth
-verity add test    tst:auth.unit "Unit test" --claim clm:auth.t1 --kind unit --path tests/test_auth.py
-verity add evidence evd:auth.run1 "CI run" --test tst:auth.unit --artifact artifacts/run1.json --status passed
+verity add claim   clm:auth.t1 "Login succeeds"  --feature feat:auth
+verity add test    tst:auth.unit "Unit test"      --claim clm:auth.t1 --kind unit --path tests/test_auth.py
+verity add evidence evd:auth.ci "CI run"          --test tst:auth.unit --artifact artifacts/ci.json --status passed
 
-verity validate          # → OK
-verity release 1.0.0     # fail-closed — all verified claims need passed evidence
-verity push              # → blob: AbCdEfGh…
+# Phase 2 — promote statuses (edit verity.json: set claim → verified, test → passing)
+verity validate      # → OK
+verity release 1.0.0
+verity push          # → blob: AbCdEfGh…
 
 # Any agent, any machine, any future session:
 verity pull AbCdEfGh…
 ```
+
+> **Why two phases?** verity validates after every `add` command. Setting `--status verified` on a claim before its test exists will fail. Build the full chain first, then mark statuses.
+>
+> Using the **Python API** instead? Statuses can be set at add time — validation is deferred until you call `validate()` or `push()`. See [Python API](docs/python-api.md).
 
 ```
 $ verity validate
@@ -79,7 +99,7 @@ $ verity log
 
 | Topic | |
 |---|---|
-| [CLI Reference](docs/cli.md) | All commands: `init`, `add`, `validate`, `release`, `push`, `pull`, `log`, `site`, `context` |
+| [CLI Reference](docs/cli.md) | All commands: `init`, `add`, `validate`, `release`, `push`, `pull`, `log`, `site`, `context`, `install-skill` |
 | [Python API](docs/python-api.md) | `VeritySession`, low-level functions, custom backends |
 | [Schema Reference](docs/schema.md) | `verity.json` fields, ID prefixes, status values, validation rules |
 | [Walrus Setup](docs/walrus.md) | Testnet, mainnet, custom endpoints |

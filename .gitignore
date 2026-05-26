@@ -56,3 +56,4 @@ Thumbs.db
 *.swp
 *.swo
 .env
+.trae/rules/git-commit-message.md

@@ -319,3 +319,66 @@ def log_cmd() -> None:
         return
     for i, record in enumerate(registry.pushes, 1):
         typer.echo(f"{i:3}.  [{record.backend}]  {record.timestamp}  {record.blob_id}")
+
+
+_SKILL_FILE = Path(__file__).parent.parent / "skills" / "SKILL.md"
+_SKILL_MARKER = "<!-- verity-skill -->"
+_TOOL_CHOICES = ["claude", "cursor", "windsurf", "aider", "codex"]
+
+
+def _skill_content() -> str:
+    if not _SKILL_FILE.exists():
+        typer.echo("Skill file not found in package installation.", err=True)
+        raise typer.Exit(1)
+    return _SKILL_FILE.read_text(encoding="utf-8")
+
+
+def _install_claude() -> None:
+    claude_md = Path.home() / ".claude" / "CLAUDE.md"
+    ref = f"@{_SKILL_FILE.resolve()}"
+    if claude_md.exists():
+        existing = claude_md.read_text(encoding="utf-8")
+        if str(_SKILL_FILE.resolve()) in existing:
+            typer.echo("verity skill already installed in ~/.claude/CLAUDE.md")
+            return
+        claude_md.write_text(existing.rstrip() + f"\n\n# verity\n{ref}\n", encoding="utf-8")
+    else:
+        claude_md.parent.mkdir(parents=True, exist_ok=True)
+        claude_md.write_text(f"# verity\n{ref}\n", encoding="utf-8")
+    typer.echo("Installed for Claude Code → ~/.claude/CLAUDE.md")
+    typer.echo(f"  {ref}")
+
+
+def _install_project(tool: str) -> None:
+    targets = {
+        "cursor": Path(".cursorrules"),
+        "windsurf": Path(".windsurfrules"),
+        "aider": Path("CONVENTIONS.md"),
+        "codex": Path("AGENTS.md"),
+    }
+    target = targets[tool]
+    content = _skill_content()
+    block = f"\n\n{_SKILL_MARKER}\n{content}\n"
+    if target.exists():
+        existing = target.read_text(encoding="utf-8")
+        if _SKILL_MARKER in existing:
+            typer.echo(f"verity skill already installed in {target}")
+            return
+        target.write_text(existing.rstrip() + block, encoding="utf-8")
+    else:
+        target.write_text(block.lstrip(), encoding="utf-8")
+    typer.echo(f"Installed for {tool} → {target}")
+
+
+@app.command("install-skill")
+def install_skill_cmd(
+    tool: Annotated[str, typer.Option("--tool", "-t", help="claude | cursor | windsurf | aider | codex")] = "claude",
+) -> None:
+    """Install the verity context skill into your AI coding assistant."""
+    if tool not in _TOOL_CHOICES:
+        typer.echo(f"Unknown tool '{tool}'. Choose from: {', '.join(_TOOL_CHOICES)}", err=True)
+        raise typer.Exit(1)
+    if tool == "claude":
+        _install_claude()
+    else:
+        _install_project(tool)

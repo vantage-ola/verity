@@ -20,6 +20,12 @@ verity init /path/to/project --repo-id repo:my-app
 
 Add an entity to the registry. All IDs must carry the correct prefix.
 
+> **Status rules** — verity validates after every write. Promoted statuses require the downstream chain to already exist:
+> - A claim can only be `verified` if it already has a linked test.
+> - A test can only be `passing` if it already has linked passed evidence.
+>
+> **Correct approach**: build the full chain with neutral statuses first (`open`, `pending`, `collected`), then edit `verity.json` to promote statuses, and run `verity validate`. If you prefer to set statuses at add time, use the [Python API](python-api.md) which defers validation until `validate()` or `push()`.
+
 ### `verity add feature`
 
 ```bash
@@ -37,8 +43,12 @@ verity add claim ID TITLE --feature FEAT_ID [--tier T1|T2|T3] [--status open|ver
 ```
 
 ```bash
+# add with default status (open) — safe at any point
 verity add claim clm:auth.t1 "Login succeeds" --feature feat:auth
 verity add claim clm:auth.t2 "Session expires" --feature feat:auth --tier T2
+
+# promoting to verified — only valid after a linked test exists
+# do this by editing verity.json, then: verity validate
 ```
 
 ### `verity add test`
@@ -48,7 +58,11 @@ verity add test ID TITLE --claim CLM_ID [--kind unit|integration] [--path PATH] 
 ```
 
 ```bash
+# add with default status (pending) — safe at any point
 verity add test tst:auth.unit "Login unit test" --claim clm:auth.t1 --kind unit --path tests/test_auth.py
+
+# promoting to passing — only valid after linked passed evidence exists
+# do this by editing verity.json, then: verity validate
 ```
 
 ### `verity add evidence`
@@ -58,6 +72,7 @@ verity add evidence ID TITLE --test TST_ID [--artifact PATH] [--status passed|fa
 ```
 
 ```bash
+# evidence status can be set at add time — no downstream dependencies
 verity add evidence evd:auth.run1 "CI run #1" --test tst:auth.unit --artifact artifacts/run1.json --status passed
 ```
 
@@ -243,3 +258,40 @@ verity context key=decisions repo=repo:my-project: chose MemWal Option A…
 ```
 
 This means agents can `recall("verity architecture")` or `recall("verity decisions")` and arrive with the relevant context without any manual briefing.
+
+---
+
+## `verity install-skill`
+
+Install the verity context skill into your AI coding assistant. The skill is bundled with the package and teaches the tool verity's proof chain model, CLI, Python API, and multi-agent patterns.
+
+```bash
+verity install-skill [--tool claude|cursor|windsurf|aider|codex]
+```
+
+| Option | Default | Description |
+|---|---|---|
+| `--tool` | `claude` | Target assistant |
+
+### Claude Code (global)
+
+Appends an `@` reference to `~/.claude/CLAUDE.md`. Applies to every Claude Code session automatically.
+
+```bash
+verity install-skill
+# Installed for Claude Code → ~/.claude/CLAUDE.md
+#   @/path/to/site-packages/verity/skills/SKILL.md
+```
+
+### Cursor, Windsurf, Codex, Aider (project-level)
+
+Injects the skill content into the tool's config file in the current directory.
+
+```bash
+verity install-skill --tool cursor    # → .cursorrules
+verity install-skill --tool windsurf  # → .windsurfrules
+verity install-skill --tool codex     # → AGENTS.md
+verity install-skill --tool aider     # → CONVENTIONS.md
+```
+
+Running the command a second time is safe — it detects the existing skill block and exits without duplicating it.
