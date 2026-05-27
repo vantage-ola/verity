@@ -52,6 +52,7 @@ s2.push()
 
 ## Rules
 
+- **Update `verity.json` after every feature, fix, or code change.** Add the relevant `feat:` / `clm:` / `tst:` / `evd:` entries. The proof chain must stay in sync with the repo.
 - ID prefixes are enforced: `feat:`, `clm:`, `tst:`, `evd:`, `rel:`
 - Always `validate()` before `release()`
 - `release()` raises `VerityReleaseError` if any verified claim lacks a passing test with passed evidence

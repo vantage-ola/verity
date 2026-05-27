@@ -16,7 +16,9 @@ mcp = FastMCP(
     instructions=(
         "Use these tools to build and maintain a verity proof chain. "
         "A proof chain links Features → Claims → Tests → Evidence → Release. "
-        "IMPORTANT: When building via these tools, add entities with neutral statuses first "
+        "IMPORTANT: After every feature, fix, or code change, update verity.json — "
+        "add the relevant feat:/clm:/tst:/evd: entries so the chain reflects what actually exists in the repo. "
+        "When building the chain, add entities with neutral statuses first "
         "(open, pending, collected), wire the full chain, then call verity_set_status to promote "
         "(verified, passing, passed). Never set verified/passing before downstream entities exist. "
         "Always call verity_validate before verity_release. "

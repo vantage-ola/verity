@@ -149,6 +149,7 @@ Auto-loaded from `.env` via `python-dotenv` when present.
 
 ## Operating rules
 
+- **Update `verity.json` after every feature, fix, or code change.** If you added a feature, add `feat:` + `clm:` + `tst:` + `evd:`. If you fixed a bug, add or update the relevant evidence. If you wrote tests, link them. The proof chain must reflect what actually exists in the repo.
 - Always validate before release: `v.validate()` or `verity validate`
 - `blob_id` is immutable — it always resolves to the exact state that was pushed
 - Agent B's push creates a **new** blob; it does not overwrite Agent A's
