@@ -332,6 +332,79 @@ def test_context_persisted_in_json(tmp_path: Path, monkeypatch: pytest.MonkeyPat
 
 
 # ---------------------------------------------------------------------------
+# status
+# ---------------------------------------------------------------------------
+
+def test_status_empty_registry(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner.invoke(app, ["init", "--repo-id", "repo:test"])
+    result = runner.invoke(app, ["status"])
+    assert result.exit_code == 0
+    assert "repo:test" in result.stdout
+    assert "features   0" in result.stdout
+    assert "releases   0" in result.stdout
+    assert "valid      ✓" in result.stdout
+
+
+def test_status_shows_counts_and_breakdown(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    _full_registry(tmp_path)
+    result = runner.invoke(app, ["status"])
+    assert result.exit_code == 0
+    assert "features   1" in result.stdout
+    assert "claims    1" in result.stdout
+    assert "1 verified" in result.stdout
+    assert "tests      1" in result.stdout
+    assert "1 passing" in result.stdout
+    assert "evidence   1" in result.stdout
+    assert "1 passed" in result.stdout
+
+
+def test_status_shows_latest_release(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    _full_registry(tmp_path)
+    runner.invoke(app, ["release", "1.0.0"])
+    result = runner.invoke(app, ["status"])
+    assert result.exit_code == 0
+    assert "releases   1" in result.stdout
+    assert "rel:1.0.0" in result.stdout
+    assert "not pushed" in result.stdout
+
+
+def test_status_shows_blob_when_pushed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    _full_registry(tmp_path)
+    runner.invoke(app, ["release", "1.0.0"])
+    reg_path = tmp_path / "verity.json"
+    data = json.loads(reg_path.read_text())
+    data["releases"][0]["walrus_blob_id"] = FAKE_BLOB
+    reg_path.write_text(json.dumps(data, sort_keys=True, separators=(",", ":")))
+    result = runner.invoke(app, ["status"])
+    assert result.exit_code == 0
+    assert FAKE_BLOB[:12] in result.stdout
+
+
+def test_status_invalid_exits_nonzero(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner.invoke(app, ["init"])
+    reg_path = tmp_path / "verity.json"
+    data = json.loads(reg_path.read_text())
+    data["claims"] = [{"id": "clm:x.t1", "feature_id": "feat:missing", "title": "bad", "tier": "T1", "status": "open"}]
+    reg_path.write_text(json.dumps(data, sort_keys=True, separators=(",", ":")))
+    result = runner.invoke(app, ["status"])
+    assert result.exit_code == 1
+    assert "✗" in result.stdout
+    assert "error" in result.stdout
+
+
+def test_status_missing_registry(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    result = runner.invoke(app, ["status"])
+    assert result.exit_code == 1
+    assert "verity init" in result.stderr
+
+
+# ---------------------------------------------------------------------------
 # log
 # ---------------------------------------------------------------------------
 

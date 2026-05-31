@@ -310,6 +310,53 @@ def context_remove(
     typer.echo(f"Removed: {key}")
 
 
+@app.command("status")
+def status_cmd(
+    directory: Annotated[Path, typer.Argument()] = Path("."),
+) -> None:
+    """Show a compact health summary of the registry."""
+    _, registry = _load(directory)
+    errors = validate(registry)
+
+    c_verified = sum(1 for c in registry.claims if c.status == "verified")
+    c_open = sum(1 for c in registry.claims if c.status == "open")
+    t_passing = sum(1 for t in registry.tests if t.status == "passing")
+    t_failing = sum(1 for t in registry.tests if t.status == "failing")
+    e_passed = sum(1 for e in registry.evidence if e.status == "passed")
+    e_failed = sum(1 for e in registry.evidence if e.status == "failed")
+
+    claim_detail = f"  ({c_verified} verified, {c_open} open)" if registry.claims else ""
+    test_detail = (
+        f"  ({t_passing} passing, {t_failing} failing)" if t_failing
+        else f"  ({t_passing} passing)" if registry.tests
+        else ""
+    )
+    evd_detail = (
+        f"  ({e_passed} passed, {e_failed} failed)" if e_failed
+        else f"  ({e_passed} passed)" if registry.evidence
+        else ""
+    )
+
+    latest_rel = registry.releases[-1] if registry.releases else None
+
+    typer.echo(f"{registry.repo_id}  schema {registry.schema_version}")
+    typer.echo(f"features   {len(registry.features)}   claims    {len(registry.claims)}{claim_detail}")
+    typer.echo(f"tests      {len(registry.tests)}{test_detail}")
+    typer.echo(f"evidence   {len(registry.evidence)}{evd_detail}")
+
+    if latest_rel:
+        blob_short = (latest_rel.walrus_blob_id[:12] + "…") if latest_rel.walrus_blob_id else "not pushed"
+        typer.echo(f"releases   {len(registry.releases)}   latest: {latest_rel.id}  blob: {blob_short}")
+    else:
+        typer.echo("releases   0")
+
+    if errors:
+        typer.echo(f"valid      ✗  ({len(errors)} error(s))")
+        raise typer.Exit(1)
+    else:
+        typer.echo("valid      ✓")
+
+
 @app.command("log")
 def log_cmd() -> None:
     """List all push history for this registry."""
