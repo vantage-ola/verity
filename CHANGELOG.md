@@ -11,6 +11,14 @@ This project uses [semantic versioning](https://semver.org/).
 
 ---
 
+## [0.1.7] — 2026-05-31
+
+### Added
+- **`verity status` CLI command** — compact terminal summary of registry health: entity counts with status breakdowns (verified/open claims, passing/failing tests, passed/failed evidence), latest release and blob ID, validation result; exits non-zero when the registry has errors
+- 6 new tests for `verity status` in `tests/test_cli.py` (172 total, 97.83% coverage)
+
+---
+
 ## [0.1.6] — 2026-05-26
 
 ### Added
@@ -185,7 +193,8 @@ Initial release. Full Phase 1–3 implementation.
 
 ---
 
-[Unreleased]: https://github.com/vantage-ola/verity/compare/v0.1.6...HEAD
+[Unreleased]: https://github.com/vantage-ola/verity/compare/v0.1.7...HEAD
+[0.1.7]: https://github.com/vantage-ola/verity/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/vantage-ola/verity/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/vantage-ola/verity/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/vantage-ola/verity/compare/v0.1.3...v0.1.4

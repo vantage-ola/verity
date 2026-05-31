@@ -115,6 +115,14 @@ blob: AbCdEfGhIjKlMnOpQrStUvWxYz0123456789
 
 $ verity log
   1.  [walrus]  2026-05-23T19:08:25Z  AbCdEfGhIjKlMnOpQrStUvWxYz0123456789
+
+$ verity status
+repo:my-project  schema 0.1.0
+features   1   claims     1  (1 verified, 0 open)
+tests      1  (1 passing)
+evidence   1  (1 passed)
+releases   1   latest: rel:1.0.0  blob: AbCdEfGh…
+valid      ✓
 ```
 
 ---

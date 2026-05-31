@@ -213,6 +213,19 @@ function CliRef() {
         <span className="c-prompt">$ </span>verity pull AbCdEfGhIjKlMnOpQrStUvWxYz…
       </Code>
 
+      <H2>verity status</H2>
+      <P>Show a compact health summary of the registry — entity counts with status breakdowns, latest release, and validation result. Exits non-zero if the registry has validation errors.</P>
+      <Code>verity status [DIRECTORY]</Code>
+      <Code>
+        <span className="c-prompt">$ </span>verity status{'\n'}
+        <span className="c-out">repo:my-project  schema 0.1.0</span>{'\n'}
+        <span className="c-out">features   6   claims    11  (10 verified, 1 open)</span>{'\n'}
+        <span className="c-out">tests     11  (11 passing)</span>{'\n'}
+        <span className="c-out">evidence  11  (11 passed)</span>{'\n'}
+        <span className="c-out">releases   2   latest: rel:0.1.5  blob: AbCdEfGh…</span>{'\n'}
+        <span className="c-out">valid      ✓</span>
+      </Code>
+
       <H2>verity log</H2>
       <P>Print all push records stored in the registry.</P>
       <Code>

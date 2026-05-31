@@ -152,6 +152,39 @@ verity pull AbCdEfGhIjKlMnOpQrStUvWxYz…
 
 ---
 
+## `verity status`
+
+Show a compact health summary of the registry — entity counts with status breakdowns, latest release, and validation result. Exits non-zero if the registry has validation errors.
+
+```bash
+verity status [DIRECTORY]
+```
+
+**Example output**
+
+```
+repo:my-project  schema 0.1.0
+features   6   claims    11  (10 verified, 1 open)
+tests     11  (11 passing)
+evidence  11  (11 passed)
+releases   2   latest: rel:0.1.5  blob: AbCdEfGh…
+valid      ✓
+```
+
+When the registry is invalid:
+
+```
+valid      ✗  (2 error(s))
+```
+
+**Use cases**
+
+- Quick check before committing — `verity status` to confirm everything is verified and the chain is clean
+- Script integration — exits 1 on any validation error, so `verity status && git push` is a lightweight gate
+- At-a-glance agent health — see how much of the chain an autonomous agent has built without parsing the full JSON
+
+---
+
 ## `verity log`
 
 Print all push operations recorded in the registry.
