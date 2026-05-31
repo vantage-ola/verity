@@ -137,6 +137,72 @@ def add_evidence(
     typer.echo(f"Added evidence {id}")
 
 
+def _unique_track_id(prefix: str, slug: str, existing: set[str]) -> str:
+    base = f"{prefix}:{slug}.track"
+    if base not in existing:
+        return base
+    for i in range(2, 1000):
+        candidate = f"{base}.{i}"
+        if candidate not in existing:
+            return candidate
+    raise RuntimeError("too many track IDs")  # pragma: no cover
+
+
+@app.command("track")
+def track_cmd(
+    feature_id: Annotated[str, typer.Argument(help="Feature ID (e.g. feat:auth)")],
+    test_path: Annotated[str, typer.Argument(help="Test file path (e.g. tests/test_auth.py)")],
+    status: Annotated[str, typer.Option("--status", "-s", help="Outcome: passed|failed|collected")] = "passed",
+    title: Annotated[str | None, typer.Option("--title", help="Claim title (auto-derived from feature if omitted)")] = None,
+    kind: Annotated[str, typer.Option("--kind", "-k", help="Test kind: unit|integration")] = "unit",
+) -> None:
+    """Auto-create claim, test, and evidence for a feature in one step."""
+    path, registry = _load()
+
+    feat_map = {f.id: f for f in registry.features}
+    if feature_id not in feat_map:
+        typer.echo(
+            f"Feature '{feature_id}' not found. Add it first with: verity add feature {feature_id} \"Title\"",
+            err=True,
+        )
+        raise typer.Exit(1)
+
+    if status not in ("passed", "failed", "collected"):
+        typer.echo(f"Invalid status '{status}'. Use: passed, failed, or collected", err=True)
+        raise typer.Exit(1)
+
+    slug = feature_id.removeprefix("feat:")
+    clm_id = _unique_track_id("clm", slug, {c.id for c in registry.claims})
+    tst_id = _unique_track_id("tst", slug, {t.id for t in registry.tests})
+    evd_id = _unique_track_id("evd", slug, {e.id for e in registry.evidence})
+
+    if status == "passed":
+        clm_status, tst_status, evd_status = "verified", "passing", "passed"
+    elif status == "failed":
+        clm_status, tst_status, evd_status = "open", "failing", "failed"
+    else:
+        clm_status, tst_status, evd_status = "open", "pending", "collected"
+
+    clm_title = title or feat_map[feature_id].title
+
+    registry.claims.append(Claim(id=clm_id, feature_id=feature_id, title=clm_title, tier="T1", status=clm_status))  # type: ignore[arg-type]
+    registry.tests.append(Test(id=tst_id, claim_id=clm_id, kind=kind, path=test_path, status=tst_status))  # type: ignore[arg-type]
+    registry.evidence.append(Evidence(id=evd_id, test_id=tst_id, kind="test_run", artifact_path=test_path, status=evd_status))  # type: ignore[arg-type]
+
+    errors = validate(registry)
+    if errors:
+        for e in errors:
+            typer.echo(f"  error: {e}", err=True)
+        typer.echo("Registry has validation errors — not saved.", err=True)
+        raise typer.Exit(1)
+    save_registry(registry, path)
+
+    typer.echo(f"Tracked {feature_id} via {test_path}")
+    typer.echo(f"  {clm_id}  ({clm_status})")
+    typer.echo(f"  {tst_id}  ({tst_status})")
+    typer.echo(f"  {evd_id}  ({evd_status})")
+
+
 @app.command("validate")
 def validate_cmd() -> None:
     """Validate the registry — check all links and required fields."""

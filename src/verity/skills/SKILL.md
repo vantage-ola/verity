@@ -4,7 +4,7 @@ Use this skill when working with the `verity` proof-chain registry — building 
 
 **Package**: `walrus-verity` on PyPI  
 **Repo**: `~/work/verity/`  
-**Version**: 0.1.7
+**Version**: 0.1.8
 
 ---
 
@@ -32,7 +32,12 @@ feature → claim → test → evidence → release
 # Init
 verity init --repo-id repo:my-project
 
-# Build the chain
+# Quick-track — one command, full chain (claim+test+evidence)
+verity track feat:auth tests/test_auth.py            # --status passed (default)
+verity track feat:auth tests/test_auth.py --status failed
+verity track feat:auth tests/test_auth.py --title "Login succeeds"
+
+# Build the chain manually (full control over IDs/tiers/statuses)
 verity add feature feat:auth "User authentication"
 verity add claim   clm:auth.t1 "Login succeeds" --feature feat:auth --status verified
 verity add test    tst:auth.unit "Unit test" --claim clm:auth.t1 --path tests/test_auth.py --status passing
@@ -46,7 +51,7 @@ verity push --backend memwal       # Walrus + MemWal semantic pointer
 
 # Inspect
 verity log
-verity show
+verity status
 ```
 
 ---

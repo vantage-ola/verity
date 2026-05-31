@@ -78,6 +78,62 @@ verity add evidence evd:auth.run1 "CI run #1" --test tst:auth.unit --artifact ar
 
 ---
 
+## `verity track`
+
+Auto-create a claim, test, and evidence entry for a feature in one step. The full chain is wired and validated before saving — no two-phase setup required.
+
+```bash
+verity track FEATURE_ID TEST_PATH [--status passed|failed|collected] [--title TITLE] [--kind unit|integration]
+```
+
+| Argument / Option | Default | Description |
+|---|---|---|
+| `FEATURE_ID` | — | Feature to track against (must already exist) |
+| `TEST_PATH` | — | Path to the test file |
+| `--status` | `passed` | Outcome: `passed`, `failed`, or `collected` |
+| `--title` | feature title | Claim title (auto-derived from the feature if omitted) |
+| `--kind` | `unit` | Test kind: `unit` or `integration` |
+
+IDs are auto-generated from the feature slug (`feat:auth` → `clm:auth.track`, `tst:auth.track`, `evd:auth.track`). Running `track` a second time for the same feature appends `.2`, `.3`, etc.
+
+**Status → chain mapping**
+
+| `--status` | claim | test | evidence |
+|---|---|---|---|
+| `passed` | `verified` | `passing` | `passed` |
+| `failed` | `open` | `failing` | `failed` |
+| `collected` | `open` | `pending` | `collected` |
+
+```bash
+# record a passing test run (default)
+verity track feat:auth tests/test_auth.py
+# Tracked feat:auth via tests/test_auth.py
+#   clm:auth.track  (verified)
+#   tst:auth.track  (passing)
+#   evd:auth.track  (passed)
+
+# record a failing test
+verity track feat:auth tests/test_auth.py --status failed
+
+# record with a custom claim title
+verity track feat:auth tests/test_auth.py --title "Login succeeds with valid credentials"
+
+# record an integration test
+verity track feat:auth tests/test_auth_integration.py --kind integration
+
+# second track call for the same feature — IDs auto-increment
+verity track feat:auth tests/test_auth2.py
+#   clm:auth.track.2  (verified)
+#   tst:auth.track.2  (passing)
+#   evd:auth.track.2  (passed)
+```
+
+**When to use `track` vs `add`**
+
+Use `track` for the common case: you ran tests, they passed, record it. Use the individual `add` commands when you need explicit IDs, custom tiers, or multi-step chains with separate claim and evidence types.
+
+---
+
 ## `verity validate`
 
 Check all links, required fields, and status consistency. Exits non-zero if any error is found.

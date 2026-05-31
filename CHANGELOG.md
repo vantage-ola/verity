@@ -11,6 +11,14 @@ This project uses [semantic versioning](https://semver.org/).
 
 ---
 
+## [0.1.8] — 2026-05-31
+
+### Added
+- **`verity track` CLI command** — auto-create claim, test, and evidence for a feature in one step; `--status passed|failed|collected` maps to the correct chain statuses; IDs auto-generated from the feature slug with `.2`, `.3`, etc. for repeated calls; no two-phase setup required
+- 8 new tests for `verity track` in `tests/test_cli.py` (180 total, 97.21% coverage)
+
+---
+
 ## [0.1.7] — 2026-05-31
 
 ### Added
@@ -193,7 +201,8 @@ Initial release. Full Phase 1–3 implementation.
 
 ---
 
-[Unreleased]: https://github.com/vantage-ola/verity/compare/v0.1.7...HEAD
+[Unreleased]: https://github.com/vantage-ola/verity/compare/v0.1.8...HEAD
+[0.1.8]: https://github.com/vantage-ola/verity/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/vantage-ola/verity/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/vantage-ola/verity/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/vantage-ola/verity/compare/v0.1.4...v0.1.5
