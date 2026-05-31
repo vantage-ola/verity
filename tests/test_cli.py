@@ -405,6 +405,94 @@ def test_status_missing_registry(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 
 
 # ---------------------------------------------------------------------------
+# track
+# ---------------------------------------------------------------------------
+
+def test_track_passed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["add", "feature", "feat:auth", "User auth"])
+    result = runner.invoke(app, ["track", "feat:auth", "tests/test_auth.py"])
+    assert result.exit_code == 0
+    assert "Tracked feat:auth" in result.stdout
+    data = json.loads((tmp_path / "verity.json").read_text())
+    assert data["claims"][0]["id"] == "clm:auth.track"
+    assert data["claims"][0]["status"] == "verified"
+    assert data["tests"][0]["status"] == "passing"
+    assert data["evidence"][0]["status"] == "passed"
+
+
+def test_track_failed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["add", "feature", "feat:auth", "User auth"])
+    result = runner.invoke(app, ["track", "feat:auth", "tests/test_auth.py", "--status", "failed"])
+    assert result.exit_code == 0
+    data = json.loads((tmp_path / "verity.json").read_text())
+    assert data["claims"][0]["status"] == "open"
+    assert data["tests"][0]["status"] == "failing"
+    assert data["evidence"][0]["status"] == "failed"
+
+
+def test_track_collected(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["add", "feature", "feat:auth", "User auth"])
+    result = runner.invoke(app, ["track", "feat:auth", "tests/test_auth.py", "--status", "collected"])
+    assert result.exit_code == 0
+    data = json.loads((tmp_path / "verity.json").read_text())
+    assert data["claims"][0]["status"] == "open"
+    assert data["tests"][0]["status"] == "pending"
+    assert data["evidence"][0]["status"] == "collected"
+
+
+def test_track_feature_not_found(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner.invoke(app, ["init"])
+    result = runner.invoke(app, ["track", "feat:missing", "tests/test.py"])
+    assert result.exit_code == 1
+    assert "feat:missing" in result.stderr
+
+
+def test_track_missing_registry(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    result = runner.invoke(app, ["track", "feat:auth", "tests/test.py"])
+    assert result.exit_code == 1
+    assert "verity init" in result.stderr
+
+
+def test_track_id_collision_increments(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["add", "feature", "feat:auth", "Auth"])
+    runner.invoke(app, ["track", "feat:auth", "tests/test_auth.py"])
+    result = runner.invoke(app, ["track", "feat:auth", "tests/test_auth2.py"])
+    assert result.exit_code == 0
+    data = json.loads((tmp_path / "verity.json").read_text())
+    claim_ids = [c["id"] for c in data["claims"]]
+    assert "clm:auth.track" in claim_ids
+    assert "clm:auth.track.2" in claim_ids
+
+
+def test_track_custom_title(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["add", "feature", "feat:auth", "Auth"])
+    runner.invoke(app, ["track", "feat:auth", "tests/test.py", "--title", "My custom claim"])
+    data = json.loads((tmp_path / "verity.json").read_text())
+    assert data["claims"][0]["title"] == "My custom claim"
+
+
+def test_track_invalid_status(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["add", "feature", "feat:auth", "Auth"])
+    result = runner.invoke(app, ["track", "feat:auth", "tests/test.py", "--status", "badstatus"])
+    assert result.exit_code == 1
+    assert "Invalid status" in result.stderr
+
+
+# ---------------------------------------------------------------------------
 # log
 # ---------------------------------------------------------------------------
 
