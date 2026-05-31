@@ -169,6 +169,26 @@ function CliRef() {
       <Code>verity add evidence ID TITLE <span className="c-flag">--test</span> TST_ID [<span className="c-flag">--artifact</span> PATH] [<span className="c-flag">--kind</span> TEXT] [<span className="c-flag">--status</span> passed|failed|collected]</Code>
       <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 16px' }}>Evidence status can be set at add time — no downstream dependencies.</p>
 
+      <H2>verity track</H2>
+      <Code>verity track FEATURE_ID TEST_PATH [<span className="c-flag">--status</span> passed|failed|collected] [<span className="c-flag">--title</span> TITLE] [<span className="c-flag">--kind</span> unit|integration]</Code>
+      <P>Auto-create a claim, test, and evidence entry for a feature in one step. The full chain is wired and validated before saving — no two-phase setup required.</P>
+      <Table
+        headers={['--status', 'claim', 'test', 'evidence']}
+        rows={[
+          ['passed (default)', 'verified', 'passing', 'passed'],
+          ['failed', 'open', 'failing', 'failed'],
+          ['collected', 'open', 'pending', 'collected'],
+        ]}
+      />
+      <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 8px' }}>IDs are auto-generated from the feature slug (<code>feat:auth</code> → <code>clm:auth.track</code>, <code>tst:auth.track</code>, <code>evd:auth.track</code>). Repeated calls append <code>.2</code>, <code>.3</code>, etc.</p>
+      <Code>
+        <span className="c-prompt">$ </span><span className="c-cmd">verity track</span> <span className="c-id">feat:auth</span> tests/test_auth.py{'\n'}
+        Tracked feat:auth via tests/test_auth.py{'\n'}
+        {'  '}<span className="c-id">clm:auth.track</span>  (verified){'\n'}
+        {'  '}<span className="c-id">tst:auth.track</span>  (passing){'\n'}
+        {'  '}<span className="c-id">evd:auth.track</span>  (passed)
+      </Code>
+
       <H2>verity validate</H2>
       <P>Checks all links, duplicate IDs, and status consistency. Exits non-zero on any error.</P>
       <Table
