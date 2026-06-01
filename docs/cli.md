@@ -20,7 +20,7 @@ verity init /path/to/project --repo-id repo:my-app
 
 Add an entity to the registry. All IDs must carry the correct prefix.
 
-> **Status rules** — verity validates after every write. Promoted statuses require the downstream chain to already exist:
+> **Status rules:** verity validates after every write. Promoted statuses require the downstream chain to already exist:
 > - A claim can only be `verified` if it already has a linked test.
 > - A test can only be `passing` if it already has linked passed evidence.
 >
@@ -80,7 +80,7 @@ verity add evidence evd:auth.run1 "CI run #1" --test tst:auth.unit --artifact ar
 
 ## `verity track`
 
-Auto-create a claim, test, and evidence entry for a feature in one step. The full chain is wired and validated before saving — no two-phase setup required.
+Auto-create a claim, test, and evidence entry for a feature in one step. The full chain is wired and validated before saving. No two-phase setup required.
 
 ```bash
 verity track FEATURE_ID TEST_PATH [--status passed|failed|collected] [--title TITLE] [--kind unit|integration]
@@ -210,7 +210,7 @@ verity pull AbCdEfGhIjKlMnOpQrStUvWxYz…
 
 ## `verity status`
 
-Show a compact health summary of the registry — entity counts with status breakdowns, latest release, and validation result. Exits non-zero if the registry has validation errors.
+Show a compact health summary of the registry: entity counts with status breakdowns, latest release, and validation result. Exits non-zero if the registry has validation errors.
 
 ```bash
 verity status [DIRECTORY]
@@ -235,9 +235,9 @@ valid      ✗  (2 error(s))
 
 **Use cases**
 
-- Quick check before committing — `verity status` to confirm everything is verified and the chain is clean
-- Script integration — exits 1 on any validation error, so `verity status && git push` is a lightweight gate
-- At-a-glance agent health — see how much of the chain an autonomous agent has built without parsing the full JSON
+- Quick check before committing: run `verity status` to confirm everything is verified and the chain is clean
+- Script integration: exits 1 on any validation error, so `verity status && git push` is a lightweight gate
+- At-a-glance agent health: see how much of the chain an autonomous agent has built without parsing the full JSON
 
 ---
 
@@ -292,13 +292,13 @@ verity site
 # <!DOCTYPE html>…
 ```
 
-The URL format depends on whether you're using testnet or mainnet — it reads `WALRUS_AGGREGATOR_URL` from the environment (same env var used by `verity push`).
+The URL format depends on whether you're using testnet or mainnet; it reads `WALRUS_AGGREGATOR_URL` from the environment (same env var used by `verity push`).
 
 ---
 
 ## `verity context`
 
-Manage named narrative context entries stored inside `verity.json`. Context entries are free-form key/value notes — architecture decisions, current focus areas, design rationale — that travel with the proof chain and are automatically stored in MemWal when you push via `verity push --backend memwal`.
+Manage named narrative context entries stored inside `verity.json`. Context entries are free-form key/value notes (architecture decisions, current focus areas, design rationale) that travel with the proof chain and are automatically stored in MemWal when you push via `verity push --backend memwal`.
 
 ```bash
 verity context set KEY VALUE [--dir DIRECTORY]
@@ -383,7 +383,7 @@ verity install-skill --tool codex     # → AGENTS.md
 verity install-skill --tool aider     # → CONVENTIONS.md
 ```
 
-Running the command a second time is safe — it detects the existing skill block and exits without duplicating it.
+Running the command a second time is safe. It detects the existing skill block and exits without duplicating it.
 
 
 ---

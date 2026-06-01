@@ -85,7 +85,7 @@ function QuickStart() {
       </Code>
 
       <H2>Build a proof chain</H2>
-      <P>Every entity links to the one before it: feature → claim → test → evidence. The CLI validates on every write — build with neutral statuses first, then promote them once the chain is fully linked.</P>
+      <P>Every entity links to the one before it: feature → claim → test → evidence. The CLI validates on every write. Build with neutral statuses first, then promote them once the chain is fully linked.</P>
       <Code>
         <span className="c-comm"># Phase 1 — build the chain (neutral statuses)</span>{'\n'}
         <span className="c-prompt">$ </span><span className="c-cmd">verity add feature</span>  <span className="c-id">feat:auth</span>   <span className="c-str">"User authentication"</span>{'\n'}
@@ -99,7 +99,7 @@ function QuickStart() {
       </Code>
 
       <Callout>
-        <strong>Why two phases?</strong> A claim can only be <code>verified</code> once a linked test exists. A test can only be <code>passing</code> once linked passed evidence exists. Build links first, set statuses after — or use the <strong>Python API</strong> which defers validation until <code>validate()</code>.
+        <strong>Why two phases?</strong> A claim can only be <code>verified</code> once a linked test exists. A test can only be <code>passing</code> once linked passed evidence exists. Build links first, set statuses after. Or use the <strong>Python API</strong> which defers validation until <code>validate()</code>.
       </Callout>
 
       <H2>Release and push</H2>
@@ -157,21 +157,21 @@ function CliRef() {
         rows={[
           ['--feature', 'required', 'Parent feature ID'],
           ['--tier', 'T1', 'Claim tier'],
-          ['--status', 'open', 'Do not pass verified here — promote after test is linked'],
+          ['--status', 'open', 'Do not pass verified here; promote after test is linked'],
         ]}
       />
 
       <H2>verity add test</H2>
       <Code>verity add test ID TITLE <span className="c-flag">--claim</span> CLM_ID [<span className="c-flag">--kind</span> unit|integration] [<span className="c-flag">--path</span> PATH] [<span className="c-flag">--status</span> pending|passing|failing]</Code>
-      <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 16px' }}>Do not pass <InlineCode>--status passing</InlineCode> here — promote after evidence is linked.</p>
+      <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 16px' }}>Do not pass <InlineCode>--status passing</InlineCode> here; promote after evidence is linked.</p>
 
       <H2>verity add evidence</H2>
       <Code>verity add evidence ID TITLE <span className="c-flag">--test</span> TST_ID [<span className="c-flag">--artifact</span> PATH] [<span className="c-flag">--kind</span> TEXT] [<span className="c-flag">--status</span> passed|failed|collected]</Code>
-      <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 16px' }}>Evidence status can be set at add time — no downstream dependencies.</p>
+      <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 16px' }}>Evidence status can be set at add time with no downstream dependencies.</p>
 
       <H2>verity track</H2>
       <Code>verity track FEATURE_ID TEST_PATH [<span className="c-flag">--status</span> passed|failed|collected] [<span className="c-flag">--title</span> TITLE] [<span className="c-flag">--kind</span> unit|integration]</Code>
-      <P>Auto-create a claim, test, and evidence entry for a feature in one step. The full chain is wired and validated before saving — no two-phase setup required.</P>
+      <P>Auto-create a claim, test, and evidence entry for a feature in one step. The full chain is wired and validated before saving. No two-phase setup required.</P>
       <Table
         headers={['--status', 'claim', 'test', 'evidence']}
         rows={[
@@ -234,7 +234,7 @@ function CliRef() {
       </Code>
 
       <H2>verity status</H2>
-      <P>Show a compact health summary of the registry — entity counts with status breakdowns, latest release, and validation result. Exits non-zero if the registry has validation errors.</P>
+      <P>Show a compact health summary of the registry: entity counts with status breakdowns, latest release, and validation result. Exits non-zero if the registry has validation errors.</P>
       <Code>verity status [DIRECTORY]</Code>
       <Code>
         <span className="c-prompt">$ </span>verity status{'\n'}
@@ -278,7 +278,7 @@ function CliRef() {
       </Code>
 
       <H2>verity install-skill</H2>
-      <P>Install the verity context skill into your AI coding assistant. The skill teaches the tool verity's proof chain model, CLI, Python API, and multi-agent patterns — so you don't have to re-explain them each session.</P>
+      <P>Install the verity context skill into your AI coding assistant. The skill teaches the tool verity's proof chain model, CLI, Python API, and multi-agent patterns, so you don't have to re-explain them each session.</P>
       <Code>
         verity install-skill [<span className="c-flag">--tool</span> claude|cursor|windsurf|aider|codex]{'\n\n'}
         <span className="c-comm"># Claude Code (global — all sessions)</span>{'\n'}
@@ -304,10 +304,10 @@ function CliRef() {
           ['aider', '', 'CONVENTIONS.md (project)'],
         ]}
       />
-      <P>Running the command a second time is safe — it detects the existing skill block and skips.</P>
+      <P>Running the command a second time is safe. It detects the existing skill block and skips.</P>
 
       <H2>MCP server</H2>
-      <P>Expose all verity tools natively to any MCP-compatible editor (Claude Code, Cursor, Windsurf, Codex). No subprocess — the editor calls the tools directly.</P>
+      <P>Expose all verity tools natively to any MCP-compatible editor (Claude Code, Cursor, Windsurf, Codex). No subprocess; the editor calls the tools directly.</P>
       <Code>
         <span className="c-comm"># install with MCP support</span>{'\n'}
         pip install <span className="c-str">"walrus-verity[mcp]"</span>{'\n\n'}
@@ -447,7 +447,7 @@ function MemWalDoc() {
     <div>
       <div className="v-overline-accent" style={{ marginBottom: 12 }}>Backends</div>
       <h1 className="v-h1" style={{ margin: '0 0 16px' }}>MemWal</h1>
-      <P>MemWal is a Walrus-backed memory layer for AI agents. verity uses it as a <em>discovery layer</em> on top of Walrus — blobs live on Walrus directly, MemWal registers semantic pointers so agents can find them later.</P>
+      <P>MemWal is a Walrus-backed memory layer for AI agents. verity uses it as a <em>discovery layer</em> on top of Walrus. Blobs live on Walrus directly; MemWal registers semantic pointers so agents can find them later.</P>
 
       <H2>Install</H2>
       <Code>pip install "walrus-verity[memwal]"</Code>
@@ -481,8 +481,8 @@ function MemWalDoc() {
       <H2>What push actually does</H2>
       <P>When you call <InlineCode>verity push --backend memwal</InlineCode>, two things happen:</P>
       <ol style={{ color: 'var(--muted-2)', paddingLeft: 20, lineHeight: 2, marginBottom: 24 }}>
-        <li><strong style={{ color: 'var(--text-strong)' }}>Walrus upload</strong> — the registry is serialized to canonical JSON and stored on Walrus. This is the primary, permanent store.</li>
-        <li><strong style={{ color: 'var(--text-strong)' }}>MemWal registration</strong> — a semantic pointer and any context entries are registered via <InlineCode>remember_and_wait()</InlineCode>. This is non-fatal: if the MemWal relayer is down, the blob is already safely on Walrus.</li>
+        <li><strong style={{ color: 'var(--text-strong)' }}>Walrus upload:</strong> the registry is serialized to canonical JSON and stored on Walrus. This is the primary, permanent store.</li>
+        <li><strong style={{ color: 'var(--text-strong)' }}>MemWal registration:</strong> a semantic pointer and any context entries are registered via <InlineCode>remember_and_wait()</InlineCode>. This is non-fatal: if the MemWal relayer is down, the blob is already safely on Walrus.</li>
       </ol>
 
       <P>The memories registered look like:</P>
@@ -522,7 +522,7 @@ function MultiAgent() {
         <span className="c-comm">  │                                  ├─ release("1.0.0")</span>{'\n'}
         <span className="c-comm">  │                                  └─ push() ──► new_blob_id</span>
       </Code>
-      <P>The original blob ID is immutable — it always resolves to exactly what Agent A published. Agent B's push creates a new blob that extends the chain.</P>
+      <P>The original blob ID is immutable. It always resolves to exactly what Agent A published. Agent B's push creates a new blob that extends the chain.</P>
 
       <H2>Code example</H2>
       <Code>
@@ -564,7 +564,7 @@ function MultiAgent() {
       </Code>
 
       <H2>Passing the blob ID</H2>
-      <P>The blob ID is a plain string — pass it however makes sense for your pipeline:</P>
+      <P>The blob ID is a plain string. Pass it however makes sense for your pipeline:</P>
       <Table
         headers={['Channel', 'Example']}
         rows={[

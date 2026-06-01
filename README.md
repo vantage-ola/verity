@@ -1,6 +1,6 @@
 # verity
 
-**A proof-chain registry for AI agents — backed by Walrus for persistent, portable, verifiable memory.**
+**A proof-chain registry for AI agents, backed by Walrus for persistent, portable, verifiable memory.**
 
 [![CI](https://github.com/vantage-ola/verity/actions/workflows/ci.yml/badge.svg)](https://github.com/vantage-ola/verity/actions/workflows/ci.yml)
 [![Coverage](https://codecov.io/gh/vantage-ola/verity/branch/main/graph/badge.svg)](https://codecov.io/gh/vantage-ola/verity)
@@ -22,8 +22,8 @@ feature → claim → test → evidence → release
                               verity pull ◄── restore anywhere, any agent
 ```
 
-1. **Proof-chain registry** — track what an agent claimed, what it tested, and what it proved, all in a single `verity.json` file.
-2. **Agent memory layer** — push the registry to [Walrus](https://docs.walrus.site) (or [MemWal](https://memwal.ai)) and pull it back in any future session, on any machine, by any agent.
+1. **Proof-chain registry:** track what an agent claimed, what it tested, and what it proved, all in a single `verity.json` file.
+2. **Agent memory layer:** push the registry to [Walrus](https://docs.walrus.site) (or [MemWal](https://memwal.ai)) and pull it back in any future session, on any machine, by any agent.
 
 Built for the **Sui Overflow hackathon, Walrus track**.
 
@@ -40,7 +40,7 @@ pip install "walrus-verity[memwal]"
 
 ### AI coding assistant integration
 
-**Context skill** — teach your AI tool the verity proof chain model, CLI, and API:
+**Context skill:** teach your AI tool the verity proof chain model, CLI, and API:
 
 ```bash
 verity install-skill                    # Claude Code (global)
@@ -50,7 +50,7 @@ verity install-skill --tool codex       # OpenAI Codex → AGENTS.md
 verity install-skill --tool aider       # Aider → CONVENTIONS.md
 ```
 
-**MCP server** — expose all verity tools natively to any MCP-compatible editor:
+**MCP server:** expose all verity tools natively to any MCP-compatible editor:
 
 ```bash
 pip install "walrus-verity[mcp]"
@@ -100,7 +100,7 @@ verity pull AbCdEfGh…
 
 > **Why two phases?** verity validates after every `add` command. Setting `--status verified` on a claim before its test exists will fail. Build the full chain first, then mark statuses.
 >
-> Using the **Python API** instead? Statuses can be set at add time — validation is deferred until you call `validate()` or `push()`. See [Python API](docs/python-api.md).
+> Using the **Python API** instead? Statuses can be set at add time; validation is deferred until you call `validate()` or `push()`. See [Python API](docs/python-api.md).
 
 ```
 $ verity validate
@@ -132,19 +132,19 @@ valid      ✓
 | Topic | |
 |---|---|
 | [CLI Reference](docs/cli.md) | All commands: `init`, `add`, `validate`, `release`, `push`, `pull`, `log`, `site`, `context`, `install-skill` |
-| [MCP Server](plugins/verity-agent/README.md) | `verity-mcp` — expose verity tools to any MCP-compatible editor |
+| [MCP Server](plugins/verity-agent/README.md) | `verity-mcp`: expose verity tools to any MCP-compatible editor |
 | [Python API](docs/python-api.md) | `VeritySession`, low-level functions, custom backends |
 | [Schema Reference](docs/schema.md) | `verity.json` fields, ID prefixes, status values, validation rules |
 | [Walrus Setup](docs/walrus.md) | Testnet, mainnet, custom endpoints |
 | [MemWal Setup](docs/memwal.md) | Env vars, delegate keys, namespace isolation |
 | [Multi-Agent Patterns](docs/multi-agent.md) | Handoff pattern, audit trail, dry-run |
-| [Scripts](docs/scripts.md) | `store_project_context.py` — seed MemWal with verity project knowledge |
+| [Scripts](docs/scripts.md) | `store_project_context.py`: seed MemWal with verity project knowledge |
 
 ---
 
 ## Acknowledgements
 
-The proof-chain model — `feature → claim → test → evidence → release` — is directly inspired by the [ssot-registry](https://github.com/groupsum/ssot-registry) project, licensed under [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0). verity adapts that model for AI agents and Walrus-backed persistence.
+The proof-chain model (`feature → claim → test → evidence → release`) is directly inspired by the [ssot-registry](https://github.com/groupsum/ssot-registry) project, licensed under [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0). verity adapts that model for AI agents and Walrus-backed persistence.
 
 ---
 
@@ -154,4 +154,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Run tests with `uv run pytest`.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
