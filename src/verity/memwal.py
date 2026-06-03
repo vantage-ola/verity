@@ -126,6 +126,7 @@ class MemWalBackend:
             repo_id = data.get("repo_id", "unknown")
             context_entries = data.get("context", [])
         except Exception:
+            data = {}
             repo_id = "unknown"
             context_entries = []
 
@@ -149,6 +150,44 @@ class MemWalBackend:
                 except _SdkError:
                     pass  # non-fatal
 
+        features = data.get("features", [])
+        if features:
+            summary = "; ".join(
+                f"{f['title']} ({f['id']}, {f.get('status', 'active')})" for f in features
+            )
+            try:
+                self._client.remember_and_wait(
+                    f"verity features repo={repo_id}: {summary}",
+                    namespace=self.namespace,
+                )
+            except _SdkError:
+                pass
+
+        verified = [c for c in data.get("claims", []) if c.get("status") == "verified"]
+        if verified:
+            summary = "; ".join(
+                f"{c['title']} ({c['id']}, {c.get('tier', 'T1')})" for c in verified
+            )
+            try:
+                self._client.remember_and_wait(
+                    f"verity verified-claims repo={repo_id}: {summary}",
+                    namespace=self.namespace,
+                )
+            except _SdkError:
+                pass
+
+        releases = data.get("releases", [])
+        if releases:
+            latest = releases[-1]
+            n = len(latest.get("claim_ids", []))
+            try:
+                self._client.remember_and_wait(
+                    f"verity latest-release repo={repo_id} version={latest['version']} at={latest['timestamp']}: {n} claims",
+                    namespace=self.namespace,
+                )
+            except _SdkError:
+                pass
+
         return blob_id
 
     def fetch(self, key: str) -> bytes:
@@ -159,3 +198,11 @@ class MemWalBackend:
             return self._walrus.fetch(key)
         except WalrusError as exc:
             raise MemWalError(f"MemWal fetch failed: {exc}") from exc
+
+    def recall(self, query: str, namespace: str | None = None) -> str:
+        """Query MemWal with a natural language question. Returns the NL answer."""
+        ns = namespace or self.namespace
+        try:
+            return self._client.recall(query, namespace=ns)
+        except _SdkError as exc:
+            raise MemWalError(f"MemWal recall failed: {exc}") from exc

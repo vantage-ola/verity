@@ -57,7 +57,7 @@ backend = MemWalBackend(
 
 ## How it works
 
-**store()** uploads the registry blob to Walrus directly (unencrypted, content-addressed), then registers two kinds of memories in MemWal:
+**store()** uploads the registry blob to Walrus directly (unencrypted, content-addressed), then registers five kinds of memories in MemWal:
 
 1. A registry pointer so agents can discover registries by repo:
    ```
@@ -70,8 +70,79 @@ backend = MemWalBackend(
    "verity context key=decisions repo=<repo_id>: chose MemWal Option A…"
    ```
 
-All MemWal registrations are non-fatal — if the relayer is down, the blob is already safely on Walrus. Agents can discover registries with `recall("verity registry for repo:X")` and retrieve project knowledge with `recall("verity architecture")` or `recall("verity decisions")`.
+3. A features summary listing all feature titles, IDs, and statuses:
+   ```
+   "verity features repo=<repo_id>: User Auth (feat:auth, active); Data Export (feat:export, deprecated)"
+   ```
+
+4. A verified-claims summary listing only claims with `status=verified`:
+   ```
+   "verity verified-claims repo=<repo_id>: Login works (clm:auth.t1, T1); …"
+   ```
+
+5. A latest-release summary with version, timestamp, and claim count:
+   ```
+   "verity latest-release repo=<repo_id> version=0.1.0 at=2025-01-01T00:00:00Z: 5 claims"
+   ```
+
+All MemWal registrations are non-fatal — if the relayer is down, the blob is already safely on Walrus.
 
 **fetch()** retrieves the blob directly from the Walrus aggregator — no MemWal round-trip needed. The `blob_id` returned by `push()` is a standard Walrus blob ID, readable by any Walrus client regardless of how it was pushed.
 
 **Why not store encrypted in MemWal?** MemWal encrypts content with SEAL before writing to Walrus, so a direct Walrus fetch returns ciphertext. verity needs deterministic JSON round-trips, so it keeps the registry unencrypted on Walrus and uses MemWal only for the discovery layer.
+
+## Natural language recall
+
+After pushing with `--backend memwal`, you can query your registry in plain English.
+
+### CLI
+
+```bash
+verity recall "what features have we built"
+verity recall "what claims are verified"
+verity recall "what was the latest release"
+verity recall "what is the architecture of this project"
+
+# Override namespace (defaults to MEMWAL_NAMESPACE env var, then "verity")
+verity recall "what features have we built" --namespace my-project
+verity recall "what features have we built" -n my-project
+```
+
+The answer is synthesized by MemWal's semantic memory layer from whatever was registered during the last `verity push --backend memwal`.
+
+### Python API
+
+```python
+from verity.memwal import MemWalBackend
+
+backend = MemWalBackend()  # reads MEMWAL_KEY, MEMWAL_ACCOUNT_ID from env
+answer = backend.recall("what features have we built")
+print(answer)
+
+# With explicit namespace
+answer = backend.recall("what claims are verified", namespace="my-project")
+```
+
+`recall()` raises `MemWalError` if the relayer is unreachable or credentials are missing. Unlike `store()`, recall errors are always surfaced — there is no silent fallback.
+
+### What gets indexed
+
+Push a registry, then immediately ask questions about it:
+
+```bash
+verity push --backend memwal
+
+verity recall "what features have we built"
+# Returns: a natural language summary of all features with their IDs and statuses
+
+verity recall "what claims are verified"
+# Returns: all claims with status=verified, grouped by tier
+
+verity recall "what was the latest release"
+# Returns: the most recent release version, timestamp, and claim count
+
+verity recall "what is the architecture"
+# Returns: your context entries (set with `verity context set architecture "..."`)
+```
+
+The recall index is updated on every push — run `verity push --backend memwal` after changing features, claims, or releases to keep answers current.
