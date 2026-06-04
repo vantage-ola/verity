@@ -4,7 +4,7 @@ Use this skill when working with the `verity` proof-chain registry — building 
 
 **Package**: `walrus-verity` on PyPI  
 **Repo**: `~/work/verity/`  
-**Version**: 0.1.9
+**Version**: 0.2.0
 
 ---
 
@@ -55,6 +55,18 @@ verity recall "what claims are verified"
 verity recall "what was the latest release"
 verity recall "architecture of this project"
 verity recall "what features have we built" --namespace my-project
+
+# Diff two Walrus blob snapshots
+verity diff <blob_a> <blob_b>
+# + feat:new  "New feature" (active)
+# ~ clm:auth.t1  open → verified
+# 1 added, 1 changed, 0 removed
+
+# Export to standard DevSecOps formats
+verity export --format sarif                         # SARIF 2.1.0 JSON
+verity export --format junit                         # JUnit XML
+verity export --format spdx                          # SPDX-2.3 JSON
+verity export --format sarif --output verity.sarif   # write to file
 
 # Inspect
 verity log

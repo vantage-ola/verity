@@ -319,6 +319,17 @@ def test_store_no_features_skips_features_memory() -> None:
 # recall()
 # ---------------------------------------------------------------------------
 
+
+class _FakeMemory:
+    def __init__(self, text: str) -> None:
+        self.text = text
+
+
+class _FakeResult:
+    def __init__(self, results: list) -> None:
+        self.results = results
+
+
 def test_recall_calls_sdk_recall() -> None:
     backend, mock_memwal, _ = _backend()
     mock_memwal.recall.return_value = "You have 2 features."
@@ -340,3 +351,64 @@ def test_recall_sdk_error_raises_memwal_error() -> None:
     mock_memwal.recall.side_effect = SdkError("relayer down")
     with pytest.raises(MemWalError, match="MemWal recall failed"):
         backend.recall("any query")
+
+
+def test_recall_string_return_path() -> None:
+    backend, mock_memwal, _ = _backend()
+    mock_memwal.recall.return_value = "plain string answer"
+    result = backend.recall("q")
+    assert result == "plain string answer"
+
+
+def test_recall_result_object_top3() -> None:
+    backend, mock_memwal, _ = _backend()
+    mock_memwal.recall.return_value = _FakeResult([
+        _FakeMemory("entry one"),
+        _FakeMemory("entry two"),
+        _FakeMemory("entry three"),
+        _FakeMemory("entry four"),
+        _FakeMemory("entry five"),
+    ])
+    result = backend.recall("q")
+    lines = result.split("\n")
+    assert lines == ["entry one", "entry two", "entry three"]
+
+
+def test_recall_result_object_empty_results() -> None:
+    backend, mock_memwal, _ = _backend()
+    mock_memwal.recall.return_value = _FakeResult([])
+    result = backend.recall("q")
+    assert result == "(no results)"
+
+
+def test_recall_skips_json_blobs() -> None:
+    backend, mock_memwal, _ = _backend()
+    mock_memwal.recall.return_value = _FakeResult([
+        _FakeMemory('{"blob_id": "abc", "repo_id": "test"}'),
+        _FakeMemory("verity features repo=test: Feature A"),
+    ])
+    result = backend.recall("q")
+    assert "verity features" in result
+    assert "{" not in result
+
+
+def test_recall_deduplicates_results() -> None:
+    backend, mock_memwal, _ = _backend()
+    mock_memwal.recall.return_value = _FakeResult([
+        _FakeMemory("verity features repo=test: Feature A"),
+        _FakeMemory("verity features repo=test: Feature A"),
+        _FakeMemory("verity verified-claims repo=test: Claim 1"),
+    ])
+    result = backend.recall("q")
+    assert result.count("verity features") == 1
+    assert "verity verified-claims" in result
+
+
+def test_recall_fallback_when_all_filtered() -> None:
+    backend, mock_memwal, _ = _backend()
+    mock_memwal.recall.return_value = _FakeResult([
+        _FakeMemory('{"blob_id": "abc"}'),
+        _FakeMemory('{"blob_id": "def"}'),
+    ])
+    result = backend.recall("q")
+    assert result == '{"blob_id": "abc"}'

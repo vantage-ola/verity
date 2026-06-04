@@ -1,4 +1,6 @@
 from verity.backends import StorageBackend
+from verity.diff import diff_registries
+from verity.export import export
 from verity.memwal import MemWalBackend
 from verity.models import Claim, ContextEntry, Evidence, Feature, PushRecord, Registry, Release, Test
 from verity.registry import load_registry, save_registry
@@ -20,6 +22,8 @@ __all__ = [
     "WalrusBackend",
     "MemWalBackend",
     "VeritySession",
+    "diff_registries",
+    "export",
     "generate_html",
     "load_registry",
     "save_registry",
