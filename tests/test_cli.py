@@ -623,6 +623,121 @@ def test_install_skill_content_includes_proof_chain(tmp_path: Path, monkeypatch:
 
 
 # ---------------------------------------------------------------------------
+# diff
+# ---------------------------------------------------------------------------
+
+
+def _two_blob_registries(tmp_path: Path) -> tuple[bytes, bytes]:
+    """Return (content_a, content_b) where b has an extra feature and a status change."""
+    from verity.models import Claim, Feature, Registry, Test
+    from verity.registry import canonical_json
+
+    reg_a = Registry(
+        repo_id="repo:test",
+        features=[Feature(id="feat:auth", title="Auth")],
+        claims=[Claim(id="clm:auth.t1", title="Login", feature_id="feat:auth", status="open")],
+        tests=[Test(id="tst:auth.unit", claim_id="clm:auth.t1", kind="unit", path="t.py")],
+    )
+    reg_b = Registry(
+        repo_id="repo:test",
+        features=[Feature(id="feat:auth", title="Auth"), Feature(id="feat:new", title="New feature")],
+        claims=[Claim(id="clm:auth.t1", title="Login", feature_id="feat:auth", status="verified")],
+        tests=[Test(id="tst:auth.unit", claim_id="clm:auth.t1", kind="unit", path="t.py", status="passing")],
+    )
+    return canonical_json(reg_a).encode(), canonical_json(reg_b).encode()
+
+
+def test_diff_no_changes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from verity.models import Registry
+    from verity.registry import canonical_json
+
+    reg = Registry(repo_id="repo:test")
+    content = canonical_json(reg).encode()
+
+    class _MockBackend:
+        def fetch(self, key: str) -> bytes:
+            return content
+
+    with patch("verity.cli.main.WalrusBackend", return_value=_MockBackend()):
+        result = runner.invoke(app, ["diff", "blobA", "blobA"])
+    assert result.exit_code == 0
+    assert "No changes." in result.stdout
+
+
+def test_diff_status_change(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    content_a, content_b = _two_blob_registries(tmp_path)
+    responses = {"blobA": content_a, "blobB": content_b}
+
+    class _MockBackend:
+        def fetch(self, key: str) -> bytes:
+            return responses[key]
+
+    with patch("verity.cli.main.WalrusBackend", return_value=_MockBackend()):
+        result = runner.invoke(app, ["diff", "blobA", "blobB"])
+    assert result.exit_code == 0
+    assert "~" in result.stdout
+    assert "→" in result.stdout
+    assert "+ feat:new" in result.stdout
+
+
+def test_diff_fetch_error(tmp_path: Path) -> None:
+    class _BadBackend:
+        def fetch(self, key: str) -> bytes:
+            raise RuntimeError("network down")
+
+    with patch("verity.cli.main.WalrusBackend", return_value=_BadBackend()):
+        result = runner.invoke(app, ["diff", "blobA", "blobB"])
+    assert result.exit_code == 1
+    assert "Fetch failed" in result.output
+
+
+# ---------------------------------------------------------------------------
+# export
+# ---------------------------------------------------------------------------
+
+
+def test_export_sarif(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    _full_registry(tmp_path)
+    result = runner.invoke(app, ["export", "--format", "sarif"])
+    assert result.exit_code == 0
+    assert "$schema" in result.stdout
+
+
+def test_export_junit(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    _full_registry(tmp_path)
+    result = runner.invoke(app, ["export", "--format", "junit"])
+    assert result.exit_code == 0
+    assert "<testsuites" in result.stdout
+
+
+def test_export_spdx(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    _full_registry(tmp_path)
+    result = runner.invoke(app, ["export", "--format", "spdx"])
+    assert result.exit_code == 0
+    assert "SPDX-2.3" in result.stdout
+
+
+def test_export_to_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    _full_registry(tmp_path)
+    out = tmp_path / "report.sarif"
+    result = runner.invoke(app, ["export", "--format", "sarif", "--output", str(out)])
+    assert result.exit_code == 0
+    assert out.exists()
+    assert "$schema" in out.read_text()
+
+
+def test_export_invalid_format(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    _full_registry(tmp_path)
+    result = runner.invoke(app, ["export", "--format", "csv"])
+    assert result.exit_code == 1
+
+
+# ---------------------------------------------------------------------------
 # recall
 # ---------------------------------------------------------------------------
 

@@ -434,6 +434,51 @@ def log_cmd() -> None:
         typer.echo(f"{i:3}.  [{record.backend}]  {record.timestamp}  {record.blob_id}")
 
 
+@app.command("diff")
+def diff_cmd(
+    blob_a: Annotated[str, typer.Argument(help="First blob ID")],
+    blob_b: Annotated[str, typer.Argument(help="Second blob ID")],
+    backend: BackendChoice = "walrus",
+) -> None:
+    """Show what changed between two Walrus blob snapshots of a proof chain."""
+    import json as _json
+
+    from verity.diff import diff_registries
+
+    b = _get_backend(backend)
+    try:
+        content_a = b.fetch(blob_a)
+        content_b = b.fetch(blob_b)
+    except Exception as e:
+        typer.echo(f"Fetch failed: {e}", err=True)
+        raise typer.Exit(1)
+    reg_a = Registry.model_validate(_json.loads(content_a))
+    reg_b = Registry.model_validate(_json.loads(content_b))
+    typer.echo(diff_registries(reg_a, reg_b, blob_a=blob_a, blob_b=blob_b))
+
+
+@app.command("export")
+def export_cmd(
+    format: Annotated[str, typer.Option("--format", "-f", help="Export format: sarif, junit, or spdx")] = "sarif",
+    directory: Annotated[Path, typer.Option("--dir", help="Registry directory")] = Path("."),
+    output: Annotated[Path | None, typer.Option("--output", "-o", help="Output file (default: stdout)")] = None,
+) -> None:
+    """Export the proof chain to a standard DevSecOps format (SARIF, JUnit XML, SPDX)."""
+    from verity.export import export
+
+    _, registry = _load(directory)
+    try:
+        result = export(registry, format)
+    except ValueError as e:
+        typer.echo(str(e), err=True)
+        raise typer.Exit(1)
+    if output:
+        output.write_text(result, encoding="utf-8")
+        typer.echo(f"Exported to {output}")
+    else:
+        typer.echo(result)
+
+
 @app.command("recall")
 def recall_cmd(
     query: Annotated[str, typer.Argument(help="Natural language question to ask MemWal")],
