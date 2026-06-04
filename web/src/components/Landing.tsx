@@ -92,7 +92,7 @@ function ResultRow({ label, value, status, mono }: { label: string; value: strin
 }
 
 function CodeSplit() {
-  const [tab, setTab] = useState<'cli' | 'json' | 'py'>('cli')
+  const [tab, setTab] = useState<'cli' | 'track' | 'json' | 'py'>('cli')
   return (
     <div style={{ border: '1px solid var(--border)' }}>
       <div style={{
@@ -102,15 +102,34 @@ function CodeSplit() {
       }}>
         <div style={{ display: 'flex' }}>
           <button className={'v-tab' + (tab === 'cli' ? ' active' : '')} onClick={() => setTab('cli')}>CLI</button>
+          <button className={'v-tab' + (tab === 'track' ? ' active' : '')} onClick={() => setTab('track')}>Track</button>
           <button className={'v-tab' + (tab === 'json' ? ' active' : '')} onClick={() => setTab('json')}>JSON</button>
           <button className={'v-tab' + (tab === 'py' ? ' active' : '')} onClick={() => setTab('py')}>Python</button>
         </div>
         <div className="v-mono" style={{ fontSize: 11, color: 'var(--muted)', letterSpacing: 'var(--tracking-wide)', whiteSpace: 'nowrap', paddingLeft: 12 }}>
-          {tab === 'cli' && '~/proj $'}{tab === 'json' && 'verity.json'}{tab === 'py' && 'session.py'}
+          {tab === 'track' && '~/proj $'}{tab === 'cli' && '~/proj $'}{tab === 'json' && 'verity.json'}{tab === 'py' && 'session.py'}
         </div>
       </div>
       <div className="v-code-split-cols">
         <div className="v-code" style={{ border: 0, padding: '20px 24px' }}>
+          {tab === 'track' && (
+            <>
+              <span className="c-comm"># one command — claim + test + evidence in one step</span>{'\n'}
+              <span className="c-prompt">$ </span><span className="c-cmd">verity track</span> <span className="c-id">feat:auth</span> <span className="c-str">tests/test_auth.py</span> <span className="c-flag">--status</span> passed{'\n'}
+              <span className="c-out">  Added clm:auth.2  tst:auth.3  evd:auth.4</span>{'\n'}
+              {'\n'}
+              <span className="c-comm"># inspect what you've built</span>{'\n'}
+              <span className="c-prompt">$ </span><span className="c-cmd">verity status</span>{'\n'}
+              <span className="c-out">  features 1  claims 1 (1 verified)</span>{'\n'}
+              <span className="c-out">  tests    1 (1 passing)</span>{'\n'}
+              <span className="c-out">  evidence 1 (1 passed)  valid ✓</span>{'\n'}
+              {'\n'}
+              <span className="c-comm"># release and push to Walrus</span>{'\n'}
+              <span className="c-prompt">$ </span><span className="c-cmd">verity release</span> <span className="c-num">1.0.0</span>{'\n'}
+              <span className="c-prompt">$ </span><span className="c-cmd">verity push</span> <span className="c-flag">--backend</span> memwal{'\n'}
+              <span className="c-out">  → blob: </span><span className="c-id">AbCdEfGh…</span>
+            </>
+          )}
           {tab === 'cli' && (
             <>
               <span className="c-comm"># 1. declare a feature you're about to ship</span>{'\n'}
@@ -205,7 +224,7 @@ export function Landing({ onDocs }: { onDocs: () => void }) {
           <span className="v-mono" style={{
             fontSize: 11, color: 'var(--muted)', padding: '3px 7px',
             border: '1px solid var(--border)', marginLeft: 6,
-          }}>v0.1.5</span>
+          }}>v0.2.0</span>
         </div>
         <nav style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
           <div className="v-nav-text">
@@ -280,7 +299,7 @@ export function Landing({ onDocs }: { onDocs: () => void }) {
           <h2 className="v-h1" style={{ margin: '0 0 48px', maxWidth: 640 }}>
             Built for the gaps in agent workflows.
           </h2>
-          <div className="v-grid-3">
+          <div className="v-grid-2">
             <UseCase
               num="A"
               title="Multi-agent handoff"
@@ -298,6 +317,12 @@ export function Landing({ onDocs }: { onDocs: () => void }) {
               title="CI/CD audit trail"
               body="Add verity push to your pipeline and every merge publishes a new blob_id. The push log is the audit trail."
               footer="merge → blob → ledger"
+            />
+            <UseCase
+              num="D"
+              title="DevSecOps export"
+              body="Export your proof chain to SARIF, JUnit XML, or SPDX in one command. Feed CI dashboards, audit tools, and compliance pipelines without knowing verity's schema."
+              footer="verity export --format sarif|junit|spdx"
             />
           </div>
         </div>
@@ -341,7 +366,7 @@ export function Landing({ onDocs }: { onDocs: () => void }) {
                 Two commands. Five minutes.
               </h2>
               <p className="v-body" style={{ color: 'var(--muted-2)', margin: 0 }}>
-                MIT licensed. Python 3.10+. No account, no key, no telemetry.
+                MIT licensed. Python 3.11+. No account, no key, no telemetry.
               </p>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

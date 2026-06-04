@@ -242,7 +242,7 @@ function CliRef() {
         <span className="c-out">features   6   claims    11  (10 verified, 1 open)</span>{'\n'}
         <span className="c-out">tests     11  (11 passing)</span>{'\n'}
         <span className="c-out">evidence  11  (11 passed)</span>{'\n'}
-        <span className="c-out">releases   2   latest: rel:0.1.5  blob: AbCdEfGh…</span>{'\n'}
+        <span className="c-out">releases   2   latest: rel:0.2.0  blob: AbCdEfGh…</span>{'\n'}
         <span className="c-out">valid      ✓</span>
       </Code>
 
