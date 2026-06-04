@@ -434,6 +434,26 @@ def log_cmd() -> None:
         typer.echo(f"{i:3}.  [{record.backend}]  {record.timestamp}  {record.blob_id}")
 
 
+@app.command("recall")
+def recall_cmd(
+    query: Annotated[str, typer.Argument(help="Natural language question to ask MemWal")],
+    namespace: Annotated[str | None, typer.Option("--namespace", "-n", help="MemWal namespace override")] = None,
+) -> None:
+    """Query MemWal with a natural language question and print the answer."""
+    _ns = namespace or os.environ.get("MEMWAL_NAMESPACE", "verity")
+    try:
+        backend = MemWalBackend(namespace=_ns)
+    except MemWalError as e:
+        typer.echo(f"MemWal config error: {e}", err=True)
+        raise typer.Exit(1)
+    try:
+        answer = backend.recall(query, namespace=_ns)
+    except MemWalError as e:
+        typer.echo(f"Recall failed: {e}", err=True)
+        raise typer.Exit(1)
+    typer.echo(answer)
+
+
 _SKILL_FILE = Path(__file__).parent.parent / "skills" / "SKILL.md"
 _SKILL_MARKER = "<!-- verity-skill -->"
 _TOOL_CHOICES = ["claude", "cursor", "windsurf", "aider", "codex"]

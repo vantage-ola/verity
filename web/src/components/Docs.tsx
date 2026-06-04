@@ -277,6 +277,27 @@ function CliRef() {
         <span className="c-out">architecture: 5-layer proof chain</span>
       </Code>
 
+      <H2>verity recall</H2>
+      <P>Query MemWal with a natural language question and get an answer synthesized from memories registered during the last <InlineCode>verity push --backend memwal</InlineCode>. Requires <InlineCode>MEMWAL_KEY</InlineCode> and <InlineCode>MEMWAL_ACCOUNT_ID</InlineCode>.</P>
+      <Code>verity recall QUERY [<span className="c-flag">--namespace</span> NS]</Code>
+      <Table
+        headers={['Option', 'Default', 'Description']}
+        rows={[
+          ['--namespace / -n', 'verity', 'MemWal namespace (overrides MEMWAL_NAMESPACE env var)'],
+        ]}
+      />
+      <Code>
+        <span className="c-prompt">$ </span>verity recall <span className="c-str">"what features have we built"</span>{'\n'}
+        <span className="c-out">User authentication, Claim tracking, MemWal Natural Language Recall, …</span>{'\n\n'}
+        <span className="c-prompt">$ </span>verity recall <span className="c-str">"what claims are verified"</span>{'\n'}
+        <span className="c-out">Login succeeds (clm:auth.t1, T1), …</span>{'\n\n'}
+        <span className="c-prompt">$ </span>verity recall <span className="c-str">"what was the latest release"</span>{'\n'}
+        <span className="c-out">0.1.8 at 2026-05-31T… — 16 claims</span>{'\n\n'}
+        <span className="c-prompt">$ </span>verity recall <span className="c-str">"architecture of this project"</span> <span className="c-flag">--namespace</span> my-project{'\n'}
+        <span className="c-out">5-layer proof chain: feature → claim → test → evidence → release</span>
+      </Code>
+      <P>What gets indexed on each <InlineCode>verity push --backend memwal</InlineCode>: a registry blob pointer, all feature titles and statuses, all verified claim titles, the latest release version, and any context entries set via <InlineCode>verity context set</InlineCode>. All writes are non-fatal — if the MemWal relayer is unreachable the blob is still safely on Walrus.</P>
+
       <H2>verity install-skill</H2>
       <P>Install the verity context skill into your AI coding assistant. The skill teaches the tool verity's proof chain model, CLI, Python API, and multi-agent patterns, so you don't have to re-explain them each session.</P>
       <Code>

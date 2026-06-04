@@ -15,6 +15,7 @@ import pytest
 from typer.testing import CliRunner
 
 from verity.cli.main import app
+from verity.memwal import MemWalError
 from verity.registry import canonical_json
 from verity.models import Registry
 
@@ -619,6 +620,44 @@ def test_install_skill_content_includes_proof_chain(tmp_path: Path, monkeypatch:
     assert "feature" in content
     assert "claim" in content
     assert "evidence" in content
+
+
+# ---------------------------------------------------------------------------
+# recall
+# ---------------------------------------------------------------------------
+
+def test_recall_cmd_prints_answer(monkeypatch: pytest.MonkeyPatch) -> None:
+    with patch("verity.cli.main.MemWalBackend") as MockBackend:
+        mock_instance = MagicMock()
+        mock_instance.recall.return_value = "You have 2 features: auth, export."
+        MockBackend.return_value = mock_instance
+        monkeypatch.setenv("MEMWAL_KEY", "0xkey")
+        monkeypatch.setenv("MEMWAL_ACCOUNT_ID", "0xacc")
+        result = runner.invoke(app, ["recall", "what features have we built"])
+    assert result.exit_code == 0
+    assert "You have 2 features" in result.stdout
+
+
+def test_recall_cmd_missing_memwal_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    with patch("verity.cli.main.MemWalBackend") as MockBackend:
+        MockBackend.side_effect = MemWalError("MemWal key is required")
+        result = runner.invoke(app, ["recall", "any query"])
+    assert result.exit_code == 1
+    assert "config error" in result.output.lower() or "config error" in (result.stderr or "").lower()
+
+
+def test_recall_cmd_custom_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
+    with patch("verity.cli.main.MemWalBackend") as MockBackend:
+        mock_instance = MagicMock()
+        mock_instance.recall.return_value = "answer"
+        MockBackend.return_value = mock_instance
+        monkeypatch.setenv("MEMWAL_KEY", "0xkey")
+        monkeypatch.setenv("MEMWAL_ACCOUNT_ID", "0xacc")
+        result = runner.invoke(app, ["recall", "query", "--namespace", "my-project"])
+    assert result.exit_code == 0
+    call_kwargs = MockBackend.call_args.kwargs
+    assert call_kwargs.get("namespace") == "my-project"
+    mock_instance.recall.assert_called_once_with("query", namespace="my-project")
 
 
 # ---------------------------------------------------------------------------

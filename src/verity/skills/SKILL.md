@@ -4,7 +4,7 @@ Use this skill when working with the `verity` proof-chain registry — building 
 
 **Package**: `walrus-verity` on PyPI  
 **Repo**: `~/work/verity/`  
-**Version**: 0.1.8
+**Version**: 0.1.9
 
 ---
 
@@ -48,6 +48,13 @@ verity validate
 verity release 1.0.0
 verity push                        # Walrus (default)
 verity push --backend memwal       # Walrus + MemWal semantic pointer
+
+# Recall from MemWal (natural language query)
+verity recall "what features have we built"
+verity recall "what claims are verified"
+verity recall "what was the latest release"
+verity recall "architecture of this project"
+verity recall "what features have we built" --namespace my-project
 
 # Inspect
 verity log
@@ -98,7 +105,7 @@ for entry in v.log():
 | `MemWalBackend` | `pip install "walrus-verity[memwal]"` | Walrus + MemWal semantic pointer |
 | In-memory (test) | built-in | Pass a `_SharedStore` instance |
 
-**MemWal**: `push(backend=MemWalBackend())` stores the blob on Walrus **and** registers a semantic pointer in MemWal. Recall is via the MemWal SDK separately — verity has no `recall()` command.
+**MemWal**: `push(backend=MemWalBackend())` stores the blob on Walrus **and** registers semantic memories in MemWal (features summary, verified claims, latest release, context entries). Use `backend.recall(query)` or `verity recall "<query>"` to query them in natural language.
 
 ---
 

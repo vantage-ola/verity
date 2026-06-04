@@ -113,24 +113,25 @@ def test_store_calls_walrus_store(minimal_registry) -> None:
 def test_store_registers_pointer_in_memwal(minimal_registry) -> None:
     backend, mock_memwal, _ = _backend()
     backend.store(canonical_json(minimal_registry).encode())
-    mock_memwal.remember_and_wait.assert_called_once()
-    text = mock_memwal.remember_and_wait.call_args.args[0]
-    assert FAKE_BLOB_ID in text
-    assert "verity registry" in text
+    mock_memwal.remember_and_wait.assert_called()
+    calls = [c.args[0] for c in mock_memwal.remember_and_wait.call_args_list]
+    registry_call = next(c for c in calls if "verity registry" in c)
+    assert FAKE_BLOB_ID in registry_call
+    assert "verity registry" in registry_call
 
 
 def test_store_pointer_includes_repo_id(minimal_registry) -> None:
     backend, mock_memwal, _ = _backend()
     backend.store(canonical_json(minimal_registry).encode())
-    text = mock_memwal.remember_and_wait.call_args.args[0]
-    assert minimal_registry.repo_id in text
+    calls = [c.args[0] for c in mock_memwal.remember_and_wait.call_args_list]
+    registry_call = next(c for c in calls if "verity registry" in c)
+    assert minimal_registry.repo_id in registry_call
 
 
 def test_store_passes_namespace_to_memwal(minimal_registry) -> None:
     backend, mock_memwal, _ = _backend(namespace="proj-ns")
     backend.store(canonical_json(minimal_registry).encode())
-    call_kwargs = mock_memwal.remember_and_wait.call_args.kwargs
-    assert call_kwargs.get("namespace") == "proj-ns"
+    assert all(c.kwargs.get("namespace") == "proj-ns" for c in mock_memwal.remember_and_wait.call_args_list)
 
 
 def test_store_walrus_error_raises(minimal_registry) -> None:
@@ -235,3 +236,107 @@ def test_fetch_walrus_error_wraps_as_memwal_error() -> None:
     mock_walrus.fetch.side_effect = WalrusError("blob not found")
     with pytest.raises(MemWalError, match="fetch failed"):
         backend.fetch(FAKE_BLOB_ID)
+
+
+# ---------------------------------------------------------------------------
+# store — batch summary memories
+# ---------------------------------------------------------------------------
+
+def _rich_registry():
+    from verity.models import Claim, Feature, Release, Registry
+    return Registry(
+        repo_id="repo:rich",
+        features=[
+            Feature(id="feat:auth", title="User Auth", status="active"),
+            Feature(id="feat:export", title="Data Export", status="deprecated"),
+        ],
+        claims=[
+            Claim(id="clm:auth.t1", feature_id="feat:auth", title="Login works", tier="T1", status="verified"),
+            Claim(id="clm:export.t1", feature_id="feat:export", title="CSV export", tier="T2", status="open"),
+        ],
+        releases=[
+            Release(id="rel:0.1.0", version="0.1.0", timestamp="2025-01-01T00:00:00Z", claim_ids=["clm:auth.t1"]),
+        ],
+    )
+
+
+def test_store_registers_features_summary() -> None:
+    from verity.registry import canonical_json
+    backend, mock_memwal, _ = _backend()
+    backend.store(canonical_json(_rich_registry()).encode())
+    calls = [c.args[0] for c in mock_memwal.remember_and_wait.call_args_list]
+    feat_call = next(c for c in calls if "verity features" in c)
+    assert "User Auth" in feat_call
+    assert "feat:auth" in feat_call
+    assert "Data Export" in feat_call
+    assert "feat:export" in feat_call
+
+
+def test_store_registers_verified_claims_summary() -> None:
+    from verity.registry import canonical_json
+    backend, mock_memwal, _ = _backend()
+    backend.store(canonical_json(_rich_registry()).encode())
+    calls = [c.args[0] for c in mock_memwal.remember_and_wait.call_args_list]
+    vc_call = next(c for c in calls if "verity verified-claims" in c)
+    assert "Login works" in vc_call
+    assert "clm:auth.t1" in vc_call
+    assert "CSV export" not in vc_call
+
+
+def test_store_registers_latest_release() -> None:
+    from verity.registry import canonical_json
+    backend, mock_memwal, _ = _backend()
+    backend.store(canonical_json(_rich_registry()).encode())
+    calls = [c.args[0] for c in mock_memwal.remember_and_wait.call_args_list]
+    rel_call = next(c for c in calls if "verity latest-release" in c)
+    assert "0.1.0" in rel_call
+    assert "1 claims" in rel_call
+
+
+def test_store_no_release_skips_release_memory() -> None:
+    from verity.models import Registry
+    from verity.registry import canonical_json
+    reg = _rich_registry()
+    reg = reg.model_copy(update={"releases": []})
+    backend, mock_memwal, _ = _backend()
+    backend.store(canonical_json(reg).encode())
+    calls = [c.args[0] for c in mock_memwal.remember_and_wait.call_args_list]
+    assert not any("verity latest-release" in c for c in calls)
+
+
+def test_store_no_features_skips_features_memory() -> None:
+    from verity.models import Registry
+    from verity.registry import canonical_json
+    reg = Registry(repo_id="repo:empty")
+    backend, mock_memwal, _ = _backend()
+    backend.store(canonical_json(reg).encode())
+    calls = [c.args[0] for c in mock_memwal.remember_and_wait.call_args_list]
+    assert not any("verity features" in c for c in calls)
+    assert not any("verity verified-claims" in c for c in calls)
+
+
+# ---------------------------------------------------------------------------
+# recall()
+# ---------------------------------------------------------------------------
+
+def test_recall_calls_sdk_recall() -> None:
+    backend, mock_memwal, _ = _backend()
+    mock_memwal.recall.return_value = "You have 2 features."
+    result = backend.recall("what features do we have")
+    mock_memwal.recall.assert_called_once_with("what features do we have", namespace=backend.namespace)
+    assert result == "You have 2 features."
+
+
+def test_recall_passes_namespace() -> None:
+    backend, mock_memwal, _ = _backend()
+    mock_memwal.recall.return_value = "answer"
+    backend.recall("any query", namespace="custom-ns")
+    mock_memwal.recall.assert_called_once_with("any query", namespace="custom-ns")
+
+
+def test_recall_sdk_error_raises_memwal_error() -> None:
+    from memwal import MemWalError as SdkError
+    backend, mock_memwal, _ = _backend()
+    mock_memwal.recall.side_effect = SdkError("relayer down")
+    with pytest.raises(MemWalError, match="MemWal recall failed"):
+        backend.recall("any query")
