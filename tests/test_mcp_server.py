@@ -11,6 +11,8 @@ from verity.mcp_server import (
     verity_add_evidence,
     verity_add_feature,
     verity_add_test,
+    verity_diff,
+    verity_export,
     verity_init,
     verity_log,
     verity_pull,
@@ -282,6 +284,73 @@ def test_status_counts(tmp_path):
 def test_status_missing_file(tmp_path):
     result = verity_status(registry_path=str(tmp_path / "nope.json"))
     assert "Error" in result
+
+
+# ---------------------------------------------------------------------------
+# verity_diff
+# ---------------------------------------------------------------------------
+
+
+def test_verity_diff_happy_path(tmp_path, monkeypatch):
+    from unittest.mock import MagicMock
+    from verity.models import Registry
+    from verity.registry import canonical_json
+
+    reg_a = Registry(repo_id="repo:test")
+    reg_b = Registry(repo_id="repo:test")
+
+    responses = {"blobA": canonical_json(reg_a).encode(), "blobB": canonical_json(reg_b).encode()}
+    mock_backend = MagicMock()
+    mock_backend.fetch.side_effect = lambda key: responses[key]
+    monkeypatch.setattr("verity.mcp_server.WalrusBackend", lambda **kw: mock_backend)
+
+    result = verity_diff(blob_a="blobA", blob_b="blobB")
+    assert "No changes." in result
+
+
+def test_verity_diff_fetch_error(monkeypatch):
+    from unittest.mock import MagicMock
+
+    mock_backend = MagicMock()
+    mock_backend.fetch.side_effect = RuntimeError("network down")
+    monkeypatch.setattr("verity.mcp_server.WalrusBackend", lambda **kw: mock_backend)
+
+    result = verity_diff(blob_a="blobA", blob_b="blobB")
+    assert result.startswith("Error:")
+
+
+# ---------------------------------------------------------------------------
+# verity_export
+# ---------------------------------------------------------------------------
+
+
+def test_verity_export_sarif(tmp_path):
+    rp = _build_clean_chain(tmp_path)
+    result = verity_export(format="sarif", registry_path=rp)
+    assert "$schema" in result
+
+
+def test_verity_export_junit(tmp_path):
+    rp = _build_clean_chain(tmp_path)
+    result = verity_export(format="junit", registry_path=rp)
+    assert "<testsuites" in result
+
+
+def test_verity_export_spdx(tmp_path):
+    rp = _build_clean_chain(tmp_path)
+    result = verity_export(format="spdx", registry_path=rp)
+    assert "SPDX-2.3" in result
+
+
+def test_verity_export_invalid_format(tmp_path):
+    rp = _build_clean_chain(tmp_path)
+    result = verity_export(format="csv", registry_path=rp)
+    assert result.startswith("Error:")
+
+
+def test_verity_export_missing_file(tmp_path):
+    result = verity_export(registry_path=str(tmp_path / "nope.json"))
+    assert result.startswith("Error:")
 
 
 # ---------------------------------------------------------------------------

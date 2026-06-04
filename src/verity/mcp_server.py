@@ -267,6 +267,42 @@ def verity_status(registry_path: str = "verity.json") -> str:
 
 
 @mcp.tool()
+def verity_diff(blob_a: str, blob_b: str) -> str:
+    """Show what changed between two Walrus blob snapshots of a proof chain. Requires WALRUS_AGGREGATOR_URL env var."""
+    import json
+
+    from verity.diff import diff_registries
+    from verity.models import Registry
+
+    try:
+        backend = WalrusBackend(
+            publisher_url=os.getenv("WALRUS_PUBLISHER_URL", ""),
+            aggregator_url=os.getenv("WALRUS_AGGREGATOR_URL", ""),
+        )
+        content_a = backend.fetch(blob_a)
+        content_b = backend.fetch(blob_b)
+        reg_a = Registry.model_validate(json.loads(content_a))
+        reg_b = Registry.model_validate(json.loads(content_b))
+        return diff_registries(reg_a, reg_b, blob_a=blob_a, blob_b=blob_b)
+    except Exception as e:
+        return f"Error: {e}"
+
+
+@mcp.tool()
+def verity_export(format: str = "sarif", registry_path: str = "verity.json") -> str:
+    """Export the proof chain to a standard DevSecOps format. format: sarif, junit, or spdx."""
+    from verity.export import export
+
+    try:
+        reg = load_registry(Path(registry_path))
+        return export(reg, format)
+    except ValueError as e:
+        return f"Error: {e}"
+    except FileNotFoundError as e:
+        return f"Error: {e}"
+
+
+@mcp.tool()
 def verity_recall(query: str, namespace: str = "verity") -> str:
     """Query MemWal with a natural language question. Returns the top matching memories registered during the last verity push --backend memwal. Requires MEMWAL_KEY and MEMWAL_ACCOUNT_ID env vars."""
     try:

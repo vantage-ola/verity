@@ -241,6 +241,78 @@ valid      ✗  (2 error(s))
 
 ---
 
+## `verity diff`
+
+Fetch two proof-chain snapshots from Walrus by blob ID and show a structured diff — which entities were added, removed, or changed (including status transitions like `open → verified`).
+
+```bash
+verity diff BLOB_A BLOB_B [--backend walrus|memwal]
+```
+
+```bash
+verity diff AbCdEfGh… XyZaBcDe…
+# --- AbCdEfGh…  (repo:my-project)
+# +++ XyZaBcDe…  (repo:my-project)
+#
+# features (0 changes)
+# claims (2 changes)
+#   ~ clm:auth.t1  open → verified
+#   + clm:auth.t2  "Login with 2FA" (open)
+# tests (1 change)
+#   + tst:auth.2fa  "2FA unit test" (pending)
+# evidence (1 change)
+#   ~ evd:auth.ci  collected → passed
+# releases (1 change)
+#   + rel:0.1.1  version=0.1.1
+#
+# 3 added, 2 changed, 0 removed
+```
+
+**Symbol key:** `+` added, `-` removed, `~` changed (status transition).
+
+Reads `WALRUS_AGGREGATOR_URL` from the environment. Works for any two blob IDs — they do not have to be sequential or from the same repo.
+
+---
+
+## `verity export`
+
+Export the local proof chain to a standard DevSecOps format so it can be consumed by CI dashboards, audit tools, and compliance pipelines.
+
+```bash
+verity export [--format sarif|junit|spdx] [--output PATH] [--dir DIRECTORY]
+```
+
+| Option | Default | Description |
+|---|---|---|
+| `--format` / `-f` | `sarif` | Output format |
+| `--output` / `-o` | — | Write to file (default: stdout) |
+| `--dir` | `.` | Directory containing `verity.json` |
+
+### Formats
+
+| Format | Description | Use case |
+|---|---|---|
+| `sarif` | SARIF 2.1.0 JSON — claims as results, features as rules | GitHub Code Scanning, VS Code Problems panel, any SARIF viewer |
+| `junit` | JUnit XML — tests as testcases, grouped by feature | CI test reporters (GitHub Actions, CircleCI, Jenkins) |
+| `spdx` | SPDX-2.3 JSON — features as packages | Software bill of materials, compliance pipelines |
+
+```bash
+# print to stdout
+verity export --format sarif
+verity export --format junit
+verity export --format spdx
+
+# write to file
+verity export --format sarif --output reports/verity.sarif
+verity export --format junit --output reports/verity.xml
+verity export --format spdx  --output reports/verity.spdx.json
+```
+
+**SARIF level mapping:** `verified` → `none` (pass), `open` → `warning`, `rejected` → `error`.
+**JUnit pass/fail:** evidence `passed` → testcase passes; evidence `failed` → `<failure>`; no evidence → `<skipped>`.
+
+---
+
 ## `verity log`
 
 Print all push operations recorded in the registry.
@@ -445,3 +517,6 @@ Or with `uvx` (no install needed):
 | `verity_pull` | Pull from Walrus by `blob_id` |
 | `verity_log` | Show push history |
 | `verity_status` | Entity counts + validation summary |
+| `verity_diff` | Diff two Walrus blob snapshots |
+| `verity_export` | Export to SARIF, JUnit, or SPDX |
+| `verity_recall` | Natural language query against MemWal |

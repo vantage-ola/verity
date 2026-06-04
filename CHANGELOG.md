@@ -11,6 +11,20 @@ This project uses [semantic versioning](https://semver.org/).
 
 ---
 
+## [0.2.0] — 2026-06-04
+
+### Added
+- **`verity diff <blob_a> <blob_b>`** — fetch any two Walrus blob snapshots, deserialise to Registry objects, and print a structured diff grouped by entity family (`+` added, `-` removed, `~` changed with status transitions like `open → verified`); optional `--backend` flag
+- **`verity export --format sarif|junit|spdx`** — export the local proof chain to standard DevSecOps interchange formats: SARIF 2.1.0 (claims as results, features as rules), JUnit XML (tests as testcases grouped by feature; evidence status drives pass/fail/skip), SPDX-2.3 (features as packages); `--output` flag writes to file instead of stdout
+- **`verity_diff` MCP tool** — diff two Walrus blobs from any MCP-compatible editor; reads `WALRUS_AGGREGATOR_URL` from env
+- **`verity_export` MCP tool** — export the local registry to SARIF, JUnit, or SPDX from any MCP-compatible editor
+- `diff_registries(a, b, *, blob_a, blob_b) -> str` exported from `verity` public API
+- `export(registry, format) -> str` and individual `export_sarif`, `export_junit`, `export_spdx` exported from `verity` public API
+- 17 new unit tests in `tests/test_diff.py` and `tests/test_export.py`; 8 new CLI tests; 225 total, 96.58% coverage
+- Coverage improvements: 6 new tests for `recall()` RecallResult formatting path in `memwal.py`; 3 new MCP tests for `verity_recall`; closed two previously uncovered areas
+
+---
+
 ## [0.1.9] — 2026-06-04
 
 ### Added
@@ -211,7 +225,8 @@ Initial release. Full Phase 1–3 implementation.
 
 ---
 
-[Unreleased]: https://github.com/vantage-ola/verity/compare/v0.1.9...HEAD
+[Unreleased]: https://github.com/vantage-ola/verity/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/vantage-ola/verity/compare/v0.1.9...v0.2.0
 [0.1.9]: https://github.com/vantage-ola/verity/compare/v0.1.8...v0.1.9
 [0.1.8]: https://github.com/vantage-ola/verity/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/vantage-ola/verity/compare/v0.1.6...v0.1.7

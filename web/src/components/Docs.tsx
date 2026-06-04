@@ -298,6 +298,48 @@ function CliRef() {
       </Code>
       <P>What gets indexed on each <InlineCode>verity push --backend memwal</InlineCode>: a registry blob pointer, all feature titles and statuses, all verified claim titles, the latest release version, and any context entries set via <InlineCode>verity context set</InlineCode>. All writes are non-fatal — if the MemWal relayer is unreachable the blob is still safely on Walrus.</P>
 
+      <H2>verity diff</H2>
+      <P>Fetch two proof-chain snapshots from Walrus by blob ID and show a structured diff — entities added, removed, or changed (with status transitions like <InlineCode>open → verified</InlineCode>).</P>
+      <Code>verity diff BLOB_A BLOB_B [<span className="c-flag">--backend</span> walrus|memwal]</Code>
+      <Code>
+        <span className="c-prompt">$ </span>verity diff <span className="c-id">AbCdEfGh…</span> <span className="c-id">XyZaBcDe…</span>{'\n'}
+        <span className="c-out">--- AbCdEfGh…  (repo:my-project)</span>{'\n'}
+        <span className="c-out">+++ XyZaBcDe…  (repo:my-project)</span>{'\n\n'}
+        <span className="c-out">features (0 changes)</span>{'\n'}
+        <span className="c-out">claims (2 changes)</span>{'\n'}
+        <span className="c-out">  ~ clm:auth.t1  open → verified</span>{'\n'}
+        <span className="c-out">  + clm:auth.t2  "Login with 2FA" (open)</span>{'\n'}
+        <span className="c-out">tests (1 change)</span>{'\n'}
+        <span className="c-out">  + tst:auth.2fa  "2FA unit test" (pending)</span>{'\n'}
+        <span className="c-out">releases (1 change)</span>{'\n'}
+        <span className="c-out">  + rel:0.1.1  version=0.1.1</span>{'\n\n'}
+        <span className="c-out">2 added, 1 changed, 0 removed</span>
+      </Code>
+      <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 16px' }}><strong>Symbol key:</strong> <InlineCode>+</InlineCode> added &nbsp; <InlineCode>-</InlineCode> removed &nbsp; <InlineCode>~</InlineCode> changed. Works on any two blob IDs — they don't have to be sequential.</p>
+
+      <H2>verity export</H2>
+      <P>Export the local proof chain to a standard DevSecOps format for CI dashboards, audit tools, and compliance pipelines.</P>
+      <Code>verity export [<span className="c-flag">--format</span> sarif|junit|spdx] [<span className="c-flag">--output</span> PATH]</Code>
+      <Table
+        headers={['Format', 'Output', 'Use case']}
+        rows={[
+          ['sarif', 'SARIF 2.1.0 JSON', 'GitHub Code Scanning, VS Code Problems panel'],
+          ['junit', 'JUnit XML', 'CI test reporters (GitHub Actions, CircleCI, Jenkins)'],
+          ['spdx', 'SPDX-2.3 JSON', 'Software bill of materials, compliance pipelines'],
+        ]}
+      />
+      <Code>
+        <span className="c-comm"># print to stdout</span>{'\n'}
+        <span className="c-prompt">$ </span>verity export <span className="c-flag">--format</span> sarif{'\n'}
+        <span className="c-prompt">$ </span>verity export <span className="c-flag">--format</span> junit{'\n'}
+        <span className="c-prompt">$ </span>verity export <span className="c-flag">--format</span> spdx{'\n\n'}
+        <span className="c-comm"># write to file</span>{'\n'}
+        <span className="c-prompt">$ </span>verity export <span className="c-flag">--format</span> sarif <span className="c-flag">--output</span> reports/verity.sarif{'\n'}
+        <span className="c-prompt">$ </span>verity export <span className="c-flag">--format</span> junit <span className="c-flag">--output</span> reports/verity.xml{'\n'}
+        <span className="c-prompt">$ </span>verity export <span className="c-flag">--format</span> spdx  <span className="c-flag">--output</span> reports/verity.spdx.json
+      </Code>
+      <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 16px' }}>SARIF level: <InlineCode>verified</InlineCode> → <InlineCode>none</InlineCode> (pass), <InlineCode>open</InlineCode> → <InlineCode>warning</InlineCode>, <InlineCode>rejected</InlineCode> → <InlineCode>error</InlineCode>. JUnit: evidence <InlineCode>passed</InlineCode> → pass; <InlineCode>failed</InlineCode> → <code>&lt;failure&gt;</code>; no evidence → <code>&lt;skipped&gt;</code>.</p>
+
       <H2>verity install-skill</H2>
       <P>Install the verity context skill into your AI coding assistant. The skill teaches the tool verity's proof chain model, CLI, Python API, and multi-agent patterns, so you don't have to re-explain them each session.</P>
       <Code>
@@ -355,6 +397,9 @@ function CliRef() {
           ['verity_push / pull', 'Walrus push and pull'],
           ['verity_log', 'Push history'],
           ['verity_status', 'Entity counts + validation summary'],
+          ['verity_diff', 'Diff two Walrus blob snapshots'],
+          ['verity_export', 'Export to SARIF, JUnit, or SPDX'],
+          ['verity_recall', 'Natural language query against MemWal'],
         ]}
       />
     </div>
@@ -675,7 +720,7 @@ export function Docs({ onBack }: { onBack: () => void }) {
         <aside className="v-docs-sidebar">
           <div style={{ padding: '32px 24px' }}>
             <div className="v-overline" style={{ marginBottom: 16, paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
-              v0.1.5
+              v0.2.0
             </div>
             {SECTIONS.map(s => (
               <button
