@@ -203,6 +203,24 @@ class MemWalBackend:
         """Query MemWal with a natural language question. Returns the NL answer."""
         ns = namespace or self.namespace
         try:
-            return self._client.recall(query, namespace=ns)
+            result = self._client.recall(query, namespace=ns)
         except _SdkError as exc:
             raise MemWalError(f"MemWal recall failed: {exc}") from exc
+        if isinstance(result, str):
+            return result
+        # RecallResult object — extract and format the top matches
+        results = getattr(result, "results", None) or []
+        if not results:
+            return "(no results)"
+        seen: set[str] = set()
+        lines = []
+        for r in results:
+            text = getattr(r, "text", str(r))
+            # skip raw JSON blob entries and duplicates
+            if text.strip().startswith("{") or text in seen:
+                continue
+            seen.add(text)
+            lines.append(text)
+            if len(lines) >= 3:
+                break
+        return "\n".join(lines) if lines else getattr(results[0], "text", str(results[0]))
