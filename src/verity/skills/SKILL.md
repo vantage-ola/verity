@@ -4,7 +4,7 @@ Use this skill when working with the `verity` proof-chain registry — building 
 
 **Package**: `walrus-verity` on PyPI  
 **Repo**: `~/work/verity/`  
-**Version**: 0.2.0
+**Version**: 0.3.0
 
 ---
 
@@ -55,6 +55,13 @@ verity recall "what claims are verified"
 verity recall "what was the latest release"
 verity recall "architecture of this project"
 verity recall "what features have we built" --namespace my-project
+
+# Sign and verify blobs (requires pip install "walrus-verity[sign]")
+verity keygen --key ~/.verity/signing.key       # generate Ed25519 keypair
+verity sign --key ~/.verity/signing.key         # sign latest push, embed sig in verity.json
+verity push                                      # re-publish with signature
+verity verify <blob_id>                         # fetch + validate chain
+verity verify <blob_id> --pubkey-b64 <b64>      # + check signature
 
 # Diff two Walrus blob snapshots
 verity diff <blob_a> <blob_b>

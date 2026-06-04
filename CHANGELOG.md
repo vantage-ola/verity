@@ -11,6 +11,22 @@ This project uses [semantic versioning](https://semver.org/).
 
 ---
 
+## [0.3.0] — 2026-06-04
+
+### Added
+- **`verity keygen [--key PATH] [--pubkey PATH]`** — generate an Ed25519 signing keypair; private key saved as PEM, public key printed as base64 for easy sharing; `--force` to overwrite
+- **`verity sign [--key PATH]`** — sign the latest push blob_id with an Ed25519 private key; signature and signer pubkey embedded in the push record in `verity.json`; run `verity push` afterwards to publish the attested state
+- **`verity verify BLOB_ID [--pubkey-b64 B64]`** — fetch a blob from Walrus, run `validate()`, and verify the embedded Ed25519 signature if a pubkey is provided; exits non-zero on any failure
+- **`verity_sign` MCP tool** — sign the latest push from any MCP-compatible editor; takes `key_path` and `registry_path`
+- **`verity_verify` MCP tool** — fetch, validate, and check signature from any MCP-compatible editor; reads `WALRUS_AGGREGATOR_URL` from env
+- `src/verity/signing.py` — pure Ed25519 functions: `generate_keypair`, `save/load_private_key`, `save/load_public_key`, `sign_blob`, `verify_blob`, `pubkey_to_b64`, `pubkey_from_b64`
+- `signature: str | None` and `signer_pubkey: str | None` optional fields on `PushRecord` — fully backwards compatible; existing `verity.json` files are unaffected
+- `sign_blob` and `verify_blob` exported from the `verity` public API
+- `sign = ["cryptography>=42.0"]` optional dependency group — `pip install "walrus-verity[sign]"`
+- 10 new unit tests in `tests/test_signing.py`; 8 new CLI tests; 8 new MCP tests; 264 total, 96.27% coverage
+
+---
+
 ## [0.2.0] — 2026-06-04
 
 ### Added
@@ -225,7 +241,8 @@ Initial release. Full Phase 1–3 implementation.
 
 ---
 
-[Unreleased]: https://github.com/vantage-ola/verity/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/vantage-ola/verity/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/vantage-ola/verity/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/vantage-ola/verity/compare/v0.1.9...v0.2.0
 [0.1.9]: https://github.com/vantage-ola/verity/compare/v0.1.8...v0.1.9
 [0.1.8]: https://github.com/vantage-ola/verity/compare/v0.1.7...v0.1.8
