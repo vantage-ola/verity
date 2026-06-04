@@ -20,8 +20,10 @@ from verity.mcp_server import (
     verity_recall,
     verity_release,
     verity_set_status,
+    verity_sign,
     verity_status,
     verity_validate,
+    verity_verify,
 )
 
 
@@ -486,3 +488,185 @@ def test_status_shows_invalid(tmp_path):
     Path(rp).write_text(json.dumps(data))
     result = verity_status(registry_path=rp)
     assert "no" in result or "error" in result.lower()
+
+
+# ---------------------------------------------------------------------------
+# verity_sign
+# ---------------------------------------------------------------------------
+
+
+def test_verity_sign_mcp(tmp_path):
+    from datetime import datetime, timezone
+    from verity.models import PushRecord, Registry
+    from verity.registry import save_registry
+    from verity.signing import generate_keypair, save_private_key
+
+    rp = _reg_path(tmp_path)
+    reg = Registry(repo_id="repo:test")
+    reg.pushes.append(PushRecord(blob_id="TestBlob42", timestamp=datetime.now(timezone.utc).isoformat()))
+    save_registry(reg, Path(rp))
+
+    priv, _ = generate_keypair()
+    key_path = tmp_path / "signing.key"
+    save_private_key(priv, key_path)
+
+    result = verity_sign(key_path=str(key_path), registry_path=rp)
+    assert "Signed blob TestBlob42" in result
+    assert "pubkey-b64:" in result
+
+    data = json.loads(Path(rp).read_text())
+    assert data["pushes"][-1]["signature"] is not None
+
+
+def test_verity_sign_no_pushes(tmp_path):
+    from verity.signing import generate_keypair, save_private_key
+
+    rp = _reg_path(tmp_path)
+    verity_init(registry_path=rp)
+    priv, _ = generate_keypair()
+    key_path = tmp_path / "signing.key"
+    save_private_key(priv, key_path)
+
+    result = verity_sign(key_path=str(key_path), registry_path=rp)
+    assert "Error" in result
+    assert "no pushes" in result.lower()
+
+
+# ---------------------------------------------------------------------------
+# verity_verify
+# ---------------------------------------------------------------------------
+
+
+def test_verity_verify_valid_chain(tmp_path, monkeypatch):
+    from verity.models import Registry
+    from verity.registry import canonical_json
+
+    reg = Registry(repo_id="repo:test")
+    content = canonical_json(reg).encode("utf-8")
+
+    class _FakeBackend:
+        def store(self, data): return "blob-verify-test"
+        def fetch(self, key): return content
+
+    import verity.mcp_server as srv
+    import verity
+    monkeypatch.setattr(srv, "WalrusBackend", lambda **kw: _FakeBackend())
+    result = verity_verify("blob-verify-test")
+    assert "chain valid ✓" in result
+    assert "repo:test" in result
+
+
+def test_verity_sign_missing_registry(tmp_path):
+    from verity.signing import generate_keypair, save_private_key
+    priv, _ = generate_keypair()
+    key_path = tmp_path / "signing.key"
+    save_private_key(priv, key_path)
+    result = verity_sign(key_path=str(key_path), registry_path=str(tmp_path / "nope.json"))
+    assert "Error" in result
+
+
+def test_verity_sign_missing_key(tmp_path):
+    rp = _reg_path(tmp_path)
+    verity_init(registry_path=rp)
+    result = verity_sign(key_path=str(tmp_path / "nope.key"), registry_path=rp)
+    assert "Error" in result
+
+
+def test_verity_verify_fetch_error(monkeypatch):
+    class _BrokenBackend:
+        def fetch(self, k): raise Exception("timeout")
+    import verity.mcp_server as srv
+    monkeypatch.setattr(srv, "WalrusBackend", lambda **kw: _BrokenBackend())
+    result = verity_verify("BadBlob")
+    assert "Error fetching blob" in result
+
+
+def test_verity_verify_invalid_chain(monkeypatch):
+    from verity.models import Claim, Registry
+    from verity.registry import canonical_json
+    reg = Registry(
+        repo_id="repo:test",
+        claims=[Claim(id="clm:x.t1", title="X", feature_id="feat:missing")],
+    )
+    content = canonical_json(reg).encode("utf-8")
+    class _FakeBackend:
+        def fetch(self, k): return content
+    import verity.mcp_server as srv
+    monkeypatch.setattr(srv, "WalrusBackend", lambda **kw: _FakeBackend())
+    result = verity_verify("BrokenBlob")
+    assert "chain invalid" in result
+
+
+def test_verity_verify_invalid_signature(monkeypatch):
+    from datetime import datetime, timezone
+    from verity.models import PushRecord, Registry
+    from verity.registry import canonical_json
+    from verity.signing import generate_keypair, pubkey_to_b64, sign_blob
+    blob_id = "SigBlob888"
+    wrong_priv, _ = generate_keypair()
+    _, pub = generate_keypair()
+    sig = sign_blob(blob_id, wrong_priv)
+    reg = Registry(
+        repo_id="repo:test",
+        pushes=[PushRecord(
+            blob_id=blob_id,
+            timestamp=datetime.now(timezone.utc).isoformat(),
+            signature=sig,
+            signer_pubkey=pubkey_to_b64(pub),
+        )],
+    )
+    content = canonical_json(reg).encode("utf-8")
+    class _FakeBackend:
+        def fetch(self, k): return content
+    import verity.mcp_server as srv
+    monkeypatch.setattr(srv, "WalrusBackend", lambda **kw: _FakeBackend())
+    result = verity_verify(blob_id)
+    assert "signature invalid" in result
+
+
+def test_verity_verify_no_sig_with_pubkey(monkeypatch):
+    from verity.models import Registry
+    from verity.registry import canonical_json
+    from verity.signing import generate_keypair, pubkey_to_b64
+    reg = Registry(repo_id="repo:test")
+    content = canonical_json(reg).encode("utf-8")
+    _, pub = generate_keypair()
+    class _FakeBackend:
+        def fetch(self, k): return content
+    import verity.mcp_server as srv
+    monkeypatch.setattr(srv, "WalrusBackend", lambda **kw: _FakeBackend())
+    result = verity_verify("UnsignedBlob", pubkey_b64=pubkey_to_b64(pub))
+    assert "no signature" in result
+
+
+def test_verity_verify_with_valid_signature(tmp_path, monkeypatch):
+    from datetime import datetime, timezone
+    from verity.models import PushRecord, Registry
+    from verity.registry import canonical_json
+    from verity.signing import generate_keypair, pubkey_to_b64, sign_blob
+
+    blob_id = "SignedBlob777"
+    priv, pub = generate_keypair()
+    pub_b64 = pubkey_to_b64(pub)
+    sig = sign_blob(blob_id, priv)
+
+    reg = Registry(
+        repo_id="repo:test",
+        pushes=[PushRecord(
+            blob_id=blob_id,
+            timestamp=datetime.now(timezone.utc).isoformat(),
+            signature=sig,
+            signer_pubkey=pub_b64,
+        )],
+    )
+    content = canonical_json(reg).encode("utf-8")
+
+    class _FakeBackend:
+        def store(self, data): return blob_id
+        def fetch(self, key): return content
+
+    import verity.mcp_server as srv
+    monkeypatch.setattr(srv, "WalrusBackend", lambda **kw: _FakeBackend())
+    result = verity_verify(blob_id, pubkey_b64=pub_b64)
+    assert "chain valid ✓" in result
+    assert "signature valid ✓" in result
