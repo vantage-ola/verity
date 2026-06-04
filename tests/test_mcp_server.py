@@ -15,6 +15,7 @@ from verity.mcp_server import (
     verity_log,
     verity_pull,
     verity_push,
+    verity_recall,
     verity_release,
     verity_set_status,
     verity_status,
@@ -281,6 +282,48 @@ def test_status_counts(tmp_path):
 def test_status_missing_file(tmp_path):
     result = verity_status(registry_path=str(tmp_path / "nope.json"))
     assert "Error" in result
+
+
+# ---------------------------------------------------------------------------
+# verity_recall
+# ---------------------------------------------------------------------------
+
+
+def test_verity_recall_happy_path(monkeypatch):
+    from unittest.mock import MagicMock
+
+    mock_backend = MagicMock()
+    mock_backend.recall.return_value = "3 features built."
+    monkeypatch.setattr("verity.mcp_server.MemWalBackend", lambda **kw: mock_backend)
+    result = verity_recall(query="what features have we built")
+    assert "3 features built." in result
+
+
+def test_verity_recall_exception_returns_error(monkeypatch):
+    monkeypatch.setattr(
+        "verity.mcp_server.MemWalBackend",
+        lambda **kw: (_ for _ in ()).throw(Exception("config missing")),
+    )
+    result = verity_recall(query="q")
+    assert result.startswith("Error:")
+    assert "config missing" in result
+
+
+def test_verity_recall_custom_namespace(monkeypatch):
+    from unittest.mock import MagicMock
+
+    mock_backend = MagicMock()
+    mock_backend.recall.return_value = "answer"
+    captured: dict = {}
+
+    def _fake_backend(**kw):
+        captured.update(kw)
+        return mock_backend
+
+    monkeypatch.setattr("verity.mcp_server.MemWalBackend", _fake_backend)
+    verity_recall(query="q", namespace="proj")
+    assert captured.get("namespace") == "proj"
+    mock_backend.recall.assert_called_once_with("q", namespace="proj")
 
 
 # ---------------------------------------------------------------------------
