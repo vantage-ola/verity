@@ -340,6 +340,39 @@ function CliRef() {
       </Code>
       <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 16px' }}>SARIF level: <InlineCode>verified</InlineCode> → <InlineCode>none</InlineCode> (pass), <InlineCode>open</InlineCode> → <InlineCode>warning</InlineCode>, <InlineCode>rejected</InlineCode> → <InlineCode>error</InlineCode>. JUnit: evidence <InlineCode>passed</InlineCode> → pass; <InlineCode>failed</InlineCode> → <code>&lt;failure&gt;</code>; no evidence → <code>&lt;skipped&gt;</code>.</p>
 
+      <H2>verity keygen</H2>
+      <P>Generate an Ed25519 signing keypair. Requires <InlineCode>pip install "walrus-verity[sign]"</InlineCode>.</P>
+      <Code>
+        verity keygen [<span className="c-flag">--key</span> PATH] [<span className="c-flag">--pubkey</span> PATH] [<span className="c-flag">--force</span>]{'\n\n'}
+        <span className="c-prompt">$ </span>verity keygen{'\n'}
+        <span className="c-out">  Private key: ~/.verity/signing.key</span>{'\n'}
+        <span className="c-out">  Public key:  ~/.verity/signing.pub</span>{'\n'}
+        <span className="c-out">  pubkey-b64:  &lt;base64&gt;</span>
+      </Code>
+
+      <H2>verity sign</H2>
+      <P>Sign the latest push blob with an Ed25519 private key. Embeds the signature and public key into the push record. Run <InlineCode>verity push</InlineCode> afterwards to publish the attested state.</P>
+      <Code>
+        verity sign [<span className="c-flag">--key</span> PATH] [<span className="c-flag">--dir</span> DIRECTORY]{'\n\n'}
+        <span className="c-prompt">$ </span>verity push{'\n'}
+        <span className="c-prompt">$ </span>verity sign <span className="c-flag">--key</span> ~/.verity/signing.key{'\n'}
+        <span className="c-out">  Signed blob AbCdEfGh…</span>{'\n'}
+        <span className="c-out">  pubkey-b64:  &lt;base64&gt;</span>{'\n'}
+        <span className="c-prompt">$ </span>verity push  <span className="c-comm"># re-publish with signature embedded</span>
+      </Code>
+
+      <H2>verity verify</H2>
+      <P>Fetch a blob from Walrus, validate the proof chain, and optionally verify the embedded signature.</P>
+      <Code>
+        verity verify <span className="c-id">BLOB_ID</span> [<span className="c-flag">--pubkey-b64</span> B64] [<span className="c-flag">--backend</span> walrus|memwal]{'\n\n'}
+        <span className="c-prompt">$ </span>verity verify <span className="c-id">AbCdEfGh…</span>{'\n'}
+        <span className="c-out">  chain valid ✓</span>{'\n\n'}
+        <span className="c-prompt">$ </span>verity verify <span className="c-id">AbCdEfGh…</span> <span className="c-flag">--pubkey-b64</span> <span className="c-str">&lt;base64&gt;</span>{'\n'}
+        <span className="c-out">  chain valid ✓</span>{'\n'}
+        <span className="c-out">  signature valid ✓   signer: abc123def456…</span>
+      </Code>
+      <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 16px' }}>Exit 0 = all checks passed. Exit 1 = chain invalid or signature mismatch.</p>
+
       <H2>verity install-skill</H2>
       <P>Install the verity context skill into your AI coding assistant. The skill teaches the tool verity's proof chain model, CLI, Python API, and multi-agent patterns, so you don't have to re-explain them each session.</P>
       <Code>
@@ -399,6 +432,8 @@ function CliRef() {
           ['verity_status', 'Entity counts + validation summary'],
           ['verity_diff', 'Diff two Walrus blob snapshots'],
           ['verity_export', 'Export to SARIF, JUnit, or SPDX'],
+          ['verity_sign', 'Sign the latest push with an Ed25519 key'],
+          ['verity_verify', 'Fetch blob, validate chain, check signature'],
           ['verity_recall', 'Natural language query against MemWal'],
         ]}
       />
@@ -720,7 +755,7 @@ export function Docs({ onBack }: { onBack: () => void }) {
         <aside className="v-docs-sidebar">
           <div style={{ padding: '32px 24px' }}>
             <div className="v-overline" style={{ marginBottom: 16, paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
-              v0.2.0
+              v0.3.0
             </div>
             {SECTIONS.map(s => (
               <button

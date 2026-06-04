@@ -313,6 +313,83 @@ verity export --format spdx  --output reports/verity.spdx.json
 
 ---
 
+## `verity keygen`
+
+Generate an Ed25519 signing keypair. The private key is used by `verity sign`; share the base64 public key with anyone who needs to verify your blobs.
+
+```bash
+verity keygen [--key PATH] [--pubkey PATH] [--force]
+```
+
+| Option | Default | Description |
+|---|---|---|
+| `--key` | `~/.verity/signing.key` | Private key output path (PEM) |
+| `--pubkey` | `~/.verity/signing.pub` | Public key output path (PEM) |
+| `--force` | `false` | Overwrite existing keys |
+
+```bash
+verity keygen
+# Private key: /Users/you/.verity/signing.key
+# Public key:  /Users/you/.verity/signing.pub
+# pubkey-b64:  <base64>
+```
+
+Requires the `sign` optional dependency: `pip install "walrus-verity[sign]"`
+
+---
+
+## `verity sign`
+
+Sign the latest push blob with an Ed25519 private key. Embeds the signature and public key into the push record in `verity.json` — run `verity push` afterwards to publish the attested state so downstream agents can verify it.
+
+```bash
+verity sign [--key PATH] [--dir DIRECTORY]
+```
+
+| Option | Default | Description |
+|---|---|---|
+| `--key` | `~/.verity/signing.key` | Path to PEM private key |
+| `--dir` | `.` | Directory containing `verity.json` |
+
+```bash
+verity push                # publish the chain
+verity sign --key ~/.verity/signing.key
+# Signed blob  AbCdEfGh…
+# pubkey-b64:  <base64>
+verity push                # re-publish with signature embedded
+```
+
+---
+
+## `verity verify`
+
+Fetch a blob from Walrus, validate the proof chain, and optionally verify the Ed25519 signature embedded in the push record.
+
+```bash
+verity verify BLOB_ID [--pubkey-b64 B64] [--backend walrus]
+```
+
+| Argument / Option | Description |
+|---|---|
+| `BLOB_ID` | Walrus blob ID to fetch |
+| `--pubkey-b64` | Base64 public key to verify against |
+| `--backend` | Storage backend (default: `walrus`) |
+
+```bash
+verity verify AbCdEfGh…
+# blob: AbCdEfGh…   repo: repo:my-project
+# features 4  claims 8 (8 verified)  tests 8  evidence 8
+# chain valid ✓
+
+verity verify AbCdEfGh… --pubkey-b64 <base64>
+# chain valid ✓
+# signature valid ✓   signer: abc123def456…
+```
+
+Exit code 0 = all checks passed. Exit code 1 = chain invalid or signature mismatch.
+
+---
+
 ## `verity log`
 
 Print all push operations recorded in the registry.
@@ -519,4 +596,6 @@ Or with `uvx` (no install needed):
 | `verity_status` | Entity counts + validation summary |
 | `verity_diff` | Diff two Walrus blob snapshots |
 | `verity_export` | Export to SARIF, JUnit, or SPDX |
+| `verity_sign` | Sign the latest push with an Ed25519 key |
+| `verity_verify` | Fetch blob, validate chain, check signature |
 | `verity_recall` | Natural language query against MemWal |

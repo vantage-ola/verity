@@ -795,3 +795,184 @@ def _mock_get_resp(status_code: int, content: bytes) -> MagicMock:
     resp.content = content
     resp.text = content.decode(errors="replace")
     return resp
+
+
+# ---------------------------------------------------------------------------
+# keygen
+# ---------------------------------------------------------------------------
+
+def test_keygen_creates_files(tmp_path: Path) -> None:
+    key = tmp_path / "signing.key"
+    pub = tmp_path / "signing.pub"
+    result = runner.invoke(app, ["keygen", "--key", str(key), "--pubkey", str(pub)])
+    assert result.exit_code == 0
+    assert key.exists()
+    assert pub.exists()
+    assert "pubkey-b64:" in result.stdout
+
+
+def test_keygen_no_overwrite_without_force(tmp_path: Path) -> None:
+    key = tmp_path / "signing.key"
+    pub = tmp_path / "signing.pub"
+    runner.invoke(app, ["keygen", "--key", str(key), "--pubkey", str(pub)])
+    result = runner.invoke(app, ["keygen", "--key", str(key), "--pubkey", str(pub)])
+    assert result.exit_code == 1
+    assert "already exists" in result.output
+
+
+def test_keygen_force_overwrites(tmp_path: Path) -> None:
+    key = tmp_path / "signing.key"
+    pub = tmp_path / "signing.pub"
+    runner.invoke(app, ["keygen", "--key", str(key), "--pubkey", str(pub)])
+    result = runner.invoke(app, ["keygen", "--key", str(key), "--pubkey", str(pub), "--force"])
+    assert result.exit_code == 0
+
+
+# ---------------------------------------------------------------------------
+# sign
+# ---------------------------------------------------------------------------
+
+def _registry_with_push(tmp_path: Path) -> tuple[Path, str]:
+    """Return (key_path, blob_id) — registry with one push record."""
+    from verity.models import PushRecord, Registry
+    from verity.registry import save_registry
+    from datetime import datetime, timezone
+
+    reg = Registry(repo_id="repo:test")
+    blob_id = "FakeBlob123abc"
+    reg.pushes.append(PushRecord(blob_id=blob_id, timestamp=datetime.now(timezone.utc).isoformat()))
+    reg_path = tmp_path / "verity.json"
+    save_registry(reg, reg_path)
+    key_path = tmp_path / "signing.key"
+    runner.invoke(app, ["keygen", "--key", str(key_path), "--pubkey", str(tmp_path / "signing.pub")])
+    return key_path, blob_id
+
+
+def test_sign_updates_push_record(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    key_path, blob_id = _registry_with_push(tmp_path)
+    result = runner.invoke(app, ["sign", "--key", str(key_path)])
+    assert result.exit_code == 0, result.output
+    assert blob_id in result.stdout
+    data = json.loads((tmp_path / "verity.json").read_text())
+    assert data["pushes"][-1]["signature"] is not None
+    assert data["pushes"][-1]["signer_pubkey"] is not None
+
+
+def test_sign_no_pushes_exits_1(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner.invoke(app, ["init"])
+    key_path = tmp_path / "signing.key"
+    runner.invoke(app, ["keygen", "--key", str(key_path), "--pubkey", str(tmp_path / "signing.pub")])
+    result = runner.invoke(app, ["sign", "--key", str(key_path)])
+    assert result.exit_code == 1
+    assert "No pushes" in result.output
+
+
+def test_sign_missing_key_exits_1(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    _registry_with_push(tmp_path)
+    result = runner.invoke(app, ["sign", "--key", str(tmp_path / "nonexistent.key")])
+    assert result.exit_code == 1
+    assert "not found" in result.output
+
+
+# ---------------------------------------------------------------------------
+# verify
+# ---------------------------------------------------------------------------
+
+def _signed_blob_content(tmp_path: Path) -> tuple[bytes, str]:
+    """Return (blob_bytes, pubkey_b64) — a registry with a signed push record."""
+    from datetime import datetime, timezone
+
+    from verity.models import PushRecord, Registry
+    from verity.registry import canonical_json
+    from verity.signing import generate_keypair, pubkey_to_b64, sign_blob
+
+    blob_id = "VerifyTestBlob999"
+    priv, pub = generate_keypair()
+    pub_b64 = pubkey_to_b64(pub)
+    sig = sign_blob(blob_id, priv)
+    reg = Registry(
+        repo_id="repo:test",
+        pushes=[PushRecord(
+            blob_id=blob_id,
+            timestamp=datetime.now(timezone.utc).isoformat(),
+            signature=sig,
+            signer_pubkey=pub_b64,
+        )],
+    )
+    content = canonical_json(reg).encode("utf-8")
+    return content, pub_b64
+
+
+def test_verify_chain_valid(tmp_path: Path) -> None:
+    content, _ = _signed_blob_content(tmp_path)
+    blob_id = "VerifyTestBlob999"
+    with patch("verity.cli.main.WalrusBackend") as MockBackend:
+        MockBackend.return_value.fetch.return_value = content
+        result = runner.invoke(app, ["verify", blob_id])
+    assert result.exit_code == 0
+    assert "chain valid ✓" in result.stdout
+
+
+def test_verify_with_valid_signature(tmp_path: Path) -> None:
+    content, pub_b64 = _signed_blob_content(tmp_path)
+    blob_id = "VerifyTestBlob999"
+    with patch("verity.cli.main.WalrusBackend") as MockBackend:
+        MockBackend.return_value.fetch.return_value = content
+        result = runner.invoke(app, ["verify", blob_id, "--pubkey-b64", pub_b64])
+    assert result.exit_code == 0
+    assert "signature valid ✓" in result.stdout
+
+
+def test_verify_invalid_signature_exits_1(tmp_path: Path) -> None:
+    from verity.signing import generate_keypair, pubkey_to_b64
+    content, _ = _signed_blob_content(tmp_path)
+    _, wrong_pub = generate_keypair()
+    blob_id = "VerifyTestBlob999"
+    with patch("verity.cli.main.WalrusBackend") as MockBackend:
+        MockBackend.return_value.fetch.return_value = content
+        result = runner.invoke(app, ["verify", blob_id, "--pubkey-b64", pubkey_to_b64(wrong_pub)])
+    assert result.exit_code == 1
+    assert "invalid" in result.output
+
+
+def test_verify_fetch_error_exits_1(tmp_path: Path) -> None:
+    with patch("verity.cli.main.WalrusBackend") as MockBackend:
+        MockBackend.return_value.fetch.side_effect = Exception("connection refused")
+        result = runner.invoke(app, ["verify", "SomeBlob123"])
+    assert result.exit_code == 1
+    assert "Fetch failed" in result.output
+
+
+def test_verify_invalid_chain_exits_1(tmp_path: Path) -> None:
+    from verity.models import Claim, Registry
+    from verity.registry import canonical_json
+
+    # claim references a non-existent feature → validate() will return errors
+    reg = Registry(
+        repo_id="repo:test",
+        claims=[Claim(id="clm:x.t1", title="X", feature_id="feat:missing", status="open")],
+    )
+    content = canonical_json(reg).encode("utf-8")
+    with patch("verity.cli.main.WalrusBackend") as MockBackend:
+        MockBackend.return_value.fetch.return_value = content
+        result = runner.invoke(app, ["verify", "BrokenBlob001"])
+    assert result.exit_code == 1
+    assert "invalid" in result.output
+
+
+def test_verify_no_sig_with_pubkey_exits_1(tmp_path: Path) -> None:
+    from verity.models import Registry
+    from verity.registry import canonical_json
+    from verity.signing import generate_keypair, pubkey_to_b64
+
+    reg = Registry(repo_id="repo:test")
+    content = canonical_json(reg).encode("utf-8")
+    _, pub = generate_keypair()
+    with patch("verity.cli.main.WalrusBackend") as MockBackend:
+        MockBackend.return_value.fetch.return_value = content
+        result = runner.invoke(app, ["verify", "UnsignedBlob", "--pubkey-b64", pubkey_to_b64(pub)])
+    assert result.exit_code == 1
+    assert "no signature" in result.output

@@ -94,6 +94,8 @@ class PushRecord(BaseModel):
     blob_id: str
     timestamp: str
     backend: Literal["walrus", "memwal"] = "walrus"
+    signature: str | None = None      # base64 Ed25519 sig over blob_id bytes
+    signer_pubkey: str | None = None  # base64 raw Ed25519 public key (32 bytes)
 
 
 class ContextEntry(BaseModel):

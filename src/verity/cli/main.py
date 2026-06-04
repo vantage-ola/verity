@@ -479,6 +479,121 @@ def export_cmd(
         typer.echo(result)
 
 
+@app.command("keygen")
+def keygen_cmd(
+    key: Annotated[Path, typer.Option("--key", help="Private key output path")] = Path.home() / ".verity" / "signing.key",
+    pubkey: Annotated[Path, typer.Option("--pubkey", help="Public key output path")] = Path.home() / ".verity" / "signing.pub",
+    force: Annotated[bool, typer.Option("--force", help="Overwrite existing key files")] = False,
+) -> None:
+    """Generate an Ed25519 signing keypair for signing proof chain blobs."""
+    try:
+        from verity.signing import generate_keypair, pubkey_to_b64, save_private_key, save_public_key
+    except ImportError as e:
+        typer.echo(str(e), err=True)
+        raise typer.Exit(1)
+    if key.exists() and not force:
+        typer.echo(f"Key already exists: {key}  (use --force to overwrite)", err=True)
+        raise typer.Exit(1)
+    priv, pub = generate_keypair()
+    save_private_key(priv, key)
+    save_public_key(pub, pubkey)
+    typer.echo(f"Private key: {key}")
+    typer.echo(f"Public key:  {pubkey}")
+    typer.echo(f"pubkey-b64:  {pubkey_to_b64(pub)}")
+
+
+@app.command("sign")
+def sign_cmd(
+    key: Annotated[Path, typer.Option("--key", help="Path to Ed25519 private key")] = Path.home() / ".verity" / "signing.key",
+    directory: Annotated[Path, typer.Option("--dir", help="Registry directory")] = Path("."),
+) -> None:
+    """Sign the latest push blob with an Ed25519 private key."""
+    try:
+        from verity.signing import load_private_key, pubkey_to_b64, sign_blob
+    except ImportError as e:
+        typer.echo(str(e), err=True)
+        raise typer.Exit(1)
+    path, registry = _load(directory)
+    if not registry.pushes:
+        typer.echo("No pushes recorded. Run 'verity push' first.", err=True)
+        raise typer.Exit(1)
+    try:
+        priv = load_private_key(key)
+    except FileNotFoundError:
+        typer.echo(f"Key not found: {key}  (run 'verity keygen' to create one)", err=True)
+        raise typer.Exit(1)
+    record = registry.pushes[-1]
+    sig = sign_blob(record.blob_id, priv)
+    pub_b64 = pubkey_to_b64(priv.public_key())
+    registry.pushes[-1] = record.model_copy(update={"signature": sig, "signer_pubkey": pub_b64})
+    save_registry(registry, path)
+    typer.echo(f"Signed blob  {record.blob_id}")
+    typer.echo(f"pubkey-b64:  {pub_b64}")
+
+
+@app.command("verify")
+def verify_cmd(
+    blob_id: Annotated[str, typer.Argument(help="Walrus blob ID to fetch and verify")],
+    pubkey_b64: Annotated[str, typer.Option("--pubkey-b64", help="Base64 public key for signature verification")] = "",
+    backend: BackendChoice = "walrus",
+) -> None:
+    """Fetch a blob from Walrus, validate the chain, and check its signature."""
+    import json as _json
+
+    b = _get_backend(backend)
+    try:
+        content = b.fetch(blob_id)
+    except Exception as e:
+        typer.echo(f"Fetch failed: {e}", err=True)
+        raise typer.Exit(1)
+    reg = Registry.model_validate(_json.loads(content))
+    errors = validate(reg)
+    feat_count = len(reg.features)
+    claim_count = len(reg.claims)
+    verified_count = sum(1 for c in reg.claims if c.status == "verified")
+    test_count = len(reg.tests)
+    evd_count = len(reg.evidence)
+    typer.echo(f"blob: {blob_id}")
+    typer.echo(f"repo: {reg.repo_id}")
+    typer.echo(
+        f"features {feat_count}  claims {claim_count} ({verified_count} verified)"
+        f"  tests {test_count}  evidence {evd_count}"
+    )
+    if errors:
+        for err in errors:
+            typer.echo(f"  chain error: {err}", err=True)
+        typer.echo("chain invalid ✗", err=True)
+        raise typer.Exit(1)
+    typer.echo("chain valid ✓")
+
+    # find the most recent signed push record in this chain's history
+    attested_blob: str | None = None
+    sig: str | None = None
+    signer: str | None = pubkey_b64 or None
+    for record in reversed(reg.pushes):
+        if record.signature:
+            sig = record.signature
+            attested_blob = record.blob_id
+            if not signer:
+                signer = record.signer_pubkey
+            break
+
+    if sig and signer and attested_blob:
+        try:
+            from verity.signing import verify_blob
+        except ImportError as e:
+            typer.echo(str(e), err=True)
+            raise typer.Exit(1)
+        if verify_blob(attested_blob, sig, signer):
+            typer.echo(f"signature valid ✓   attests: {attested_blob[:16]}…  signer: {signer[:16]}…")
+        else:
+            typer.echo("signature invalid ✗", err=True)
+            raise typer.Exit(1)
+    elif pubkey_b64:
+        typer.echo("no signature found in push records for this blob", err=True)
+        raise typer.Exit(1)
+
+
 @app.command("recall")
 def recall_cmd(
     query: Annotated[str, typer.Argument(help="Natural language question to ask MemWal")],

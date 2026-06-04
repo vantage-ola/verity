@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "walrus-verity"
-version = "0.2.0"
+version = "0.3.0"
 description = "Proof-chain registry for AI agents — backed by Walrus for persistent, portable, verifiable memory"
 readme = "README.md"
 license = { text = "MIT" }
@@ -57,9 +57,13 @@ dev = [
     "pytest-cov>=5.0",
     "memwal>=0.1.0",
     "mcp>=1.0",
+    "cryptography>=42.0",
 ]
 mcp = [
     "mcp>=1.27.1",
+]
+sign = [
+    "cryptography>=42.0",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -96,3 +100,8 @@ exclude_lines = [
 
 [tool.coverage.html]
 directory = "htmlcov"
+
+[dependency-groups]
+dev = [
+    "cryptography>=48.0.0",
+]
