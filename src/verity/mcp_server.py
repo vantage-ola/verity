@@ -10,6 +10,7 @@ from mcp.server.fastmcp import FastMCP
 from verity import VeritySession, WalrusBackend, load_registry, save_registry
 from verity.release import VerityReleaseError
 from verity.session import VerityPushError
+from verity.memwal import MemWalBackend
 
 mcp = FastMCP(
     "verity",
@@ -262,6 +263,18 @@ def verity_status(registry_path: str = "verity.json") -> str:
         ]
         return "\n".join(lines)
     except FileNotFoundError as e:
+        return f"Error: {e}"
+
+
+@mcp.tool()
+def verity_recall(query: str, namespace: str = "verity") -> str:
+    """Query MemWal with a natural language question. Returns the top matching memories registered during the last verity push --backend memwal. Requires MEMWAL_KEY and MEMWAL_ACCOUNT_ID env vars."""
+    try:
+        backend = MemWalBackend(namespace=namespace)
+        return backend.recall(query, namespace=namespace)
+    except ImportError:
+        return "Error: memwal package not installed — run: pip install 'walrus-verity[memwal]'"
+    except Exception as e:  # MemWalError or config errors
         return f"Error: {e}"
 
 

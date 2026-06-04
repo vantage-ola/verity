@@ -11,6 +11,16 @@ This project uses [semantic versioning](https://semver.org/).
 
 ---
 
+## [0.1.9] — 2026-06-04
+
+### Added
+- **`verity recall` CLI command** — natural language query against MemWal; returns the top 3 semantically closest memories (deduplicated, raw JSON blobs filtered out); requires `MEMWAL_KEY` and `MEMWAL_ACCOUNT_ID`; optional `--namespace / -n` flag
+- **`MemWalBackend.recall(query, namespace=None)`** — programmatic recall method; raises `MemWalError` on SDK failure (unlike `store()`, errors are not swallowed)
+- **Richer MemWal indexing on push** — `verity push --backend memwal` now registers three additional batch-summary memories alongside the existing registry pointer and context entries: all features (title, ID, status), all verified claims (title, ID, tier), and the latest release (version, timestamp, claim count)
+- 11 new tests: 8 in `tests/test_memwal.py` (batch summaries + `recall()`), 3 in `tests/test_cli.py` (recall command); 191 total, 96.88% coverage
+
+---
+
 ## [0.1.8] — 2026-05-31
 
 ### Added
@@ -201,7 +211,8 @@ Initial release. Full Phase 1–3 implementation.
 
 ---
 
-[Unreleased]: https://github.com/vantage-ola/verity/compare/v0.1.8...HEAD
+[Unreleased]: https://github.com/vantage-ola/verity/compare/v0.1.9...HEAD
+[0.1.9]: https://github.com/vantage-ola/verity/compare/v0.1.8...v0.1.9
 [0.1.8]: https://github.com/vantage-ola/verity/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/vantage-ola/verity/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/vantage-ola/verity/compare/v0.1.5...v0.1.6
