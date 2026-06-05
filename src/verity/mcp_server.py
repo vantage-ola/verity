@@ -176,6 +176,53 @@ def verity_set_status(
 
 
 @mcp.tool()
+def verity_set_status_batch(
+    updates: list[dict],
+    registry_path: str = "verity.json",
+) -> str:
+    """
+    Promote multiple entities in one call — validate once, save once.
+
+    updates: list of {"id": "<entity-id>", "status": "<new-status>"} dicts.
+
+    Example:
+        [{"id": "evd:auth.ci", "status": "passed"},
+         {"id": "tst:auth.unit", "status": "passing"},
+         {"id": "clm:auth.t1", "status": "verified"}]
+    """
+    try:
+        reg = load_registry(Path(registry_path))
+        all_entities = [*reg.features, *reg.claims, *reg.tests, *reg.evidence]
+        index = {e.id: e for e in all_entities}
+
+        applied: list[str] = []
+        originals: dict[str, str] = {}
+
+        for item in updates:
+            eid = item.get("id", "")
+            new_status = item.get("status", "")
+            if not eid or not new_status:
+                return f"Error: each update must have 'id' and 'status' keys, got {item!r}"
+            entity = index.get(eid)
+            if entity is None:
+                return f"Error: no entity with id={eid!r} found in {registry_path}"
+            originals[eid] = entity.status  # type: ignore[attr-defined]
+            entity.status = new_status  # type: ignore[attr-defined]
+            applied.append(f"{eid!r}: {originals[eid]} → {new_status}")
+
+        errors = validate(reg)
+        if errors:
+            for eid, old in originals.items():
+                index[eid].status = old  # type: ignore[attr-defined]
+            return "Status updates rejected — validation errors:\n" + "\n".join(f"  - {e}" for e in errors)
+
+        save_registry(reg, Path(registry_path))
+        return "Updated:\n" + "\n".join(f"  {line}" for line in applied)
+    except Exception as e:  # pragma: no cover
+        return f"Error: {e}"
+
+
+@mcp.tool()
 def verity_validate(registry_path: str = "verity.json") -> str:
     """Validate the proof chain. Returns 'OK' or a list of validation errors."""
     try:
