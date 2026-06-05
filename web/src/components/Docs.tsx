@@ -425,6 +425,7 @@ function CliRef() {
           ['verity_init', 'Create verity.json'],
           ['verity_add_feature / claim / test / evidence', 'Add chain entities'],
           ['verity_set_status', 'Promote status after chain is wired'],
+          ['verity_set_status_batch', 'Promote multiple entities atomically in one call'],
           ['verity_validate', 'Validate the full chain'],
           ['verity_release', 'Fail-closed release'],
           ['verity_push / pull', 'Walrus push and pull'],
@@ -755,7 +756,7 @@ export function Docs({ onBack }: { onBack: () => void }) {
         <aside className="v-docs-sidebar">
           <div style={{ padding: '32px 24px' }}>
             <div className="v-overline" style={{ marginBottom: 16, paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
-              v0.3.0
+              v0.3.1
             </div>
             {SECTIONS.map(s => (
               <button
