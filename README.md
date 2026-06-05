@@ -1,6 +1,8 @@
 # verity
 
-**A proof-chain registry for AI agents, backed by Walrus for persistent, portable, verifiable memory.**
+**How do you trust what an AI agent built?**
+
+verity is a proof-chain registry for AI agents — record what was built, what was claimed, what tests ran, and what they proved. Every chain is published to [Walrus](https://docs.walrus.site) as an immutable blob. Any agent, on any machine, can pull it back and verify it.
 
 [![CI](https://github.com/vantage-ola/verity/actions/workflows/ci.yml/badge.svg)](https://github.com/vantage-ola/verity/actions/workflows/ci.yml)
 [![Coverage](https://codecov.io/gh/vantage-ola/verity/branch/main/graph/badge.svg)](https://codecov.io/gh/vantage-ola/verity)
@@ -11,9 +13,7 @@
 
 ---
 
-## What it does
-
-verity gives AI agents structured, portable memory:
+## The model
 
 ```
 feature → claim → test → evidence → release
@@ -22,8 +22,11 @@ feature → claim → test → evidence → release
                               verity pull ◄── restore anywhere, any agent
 ```
 
-1. **Proof-chain registry:** track what an agent claimed, what it tested, and what it proved, all in a single `verity.json` file.
-2. **Agent memory layer:** push the registry to [Walrus](https://docs.walrus.site) (or [MemWal](https://memwal.ai)) and pull it back in any future session, on any machine, by any agent.
+- **feature** — a capability being shipped
+- **claim** — a testable statement about the feature
+- **test** — the mechanism that exercises the claim
+- **evidence** — the pass/fail signal the test produced
+- **release** — a named snapshot; `push()` publishes it to Walrus
 
 Built for the **Sui Overflow hackathon, Walrus track**.
 
@@ -34,23 +37,84 @@ Built for the **Sui Overflow hackathon, Walrus track**.
 ```bash
 pip install walrus-verity
 
-# With MemWal support
+# With MemWal semantic recall
 pip install "walrus-verity[memwal]"
+
+# With Ed25519 signing support
+pip install "walrus-verity[sign]"
 ```
 
-### AI coding assistant integration
+---
 
-**Context skill:** teach your AI tool the verity proof chain model, CLI, and API:
+## Quick start
+
+The fastest path — one command records the full claim/test/evidence chain:
 
 ```bash
-verity install-skill                    # Claude Code (global)
+verity init --repo-id repo:my-project
+verity track feat:auth tests/test_auth.py --title "Login succeeds"
+verity validate
+verity release 1.0.0
+verity push          # → blob: AbCdEfGh…
+```
+
+Or build the chain manually for full control:
+
+```bash
+# Phase 1 — add entities with neutral statuses
+verity add feature  feat:auth "User authentication"
+verity add claim    clm:auth.t1 "Login succeeds"  --feature feat:auth
+verity add test     tst:auth.unit "Unit test"      --claim clm:auth.t1 --path tests/test_auth.py
+verity add evidence evd:auth.ci "CI run"           --test tst:auth.unit --artifact artifacts/ci.json
+
+# Phase 2 — promote statuses once the chain is fully linked
+verity add evidence evd:auth.ci "CI run" --test tst:auth.unit --artifact artifacts/ci.json --status passed
+verity validate      # → OK
+verity release 1.0.0
+verity push          # → blob: AbCdEfGh…
+
+# Any agent, any machine, any future session:
+verity pull AbCdEfGh…
+```
+
+> **Why neutral statuses first?** verity validates after every `add`. Setting `--status verified` on a claim before its test exists will fail. Build the full chain first, then promote statuses.
+
+---
+
+## Multi-agent trust
+
+Agent A builds and signs. Agent B verifies before building on top.
+
+```bash
+# Agent A
+verity push                                          # → blob_a
+verity keygen --key ~/.verity/signing.key            # generate keypair once
+verity sign --key ~/.verity/signing.key              # attest blob_a
+verity push                                          # → blob_b (carries the attestation)
+
+# Agent B — receives blob_b + pubkey
+verity verify blob_b --pubkey-b64 <pubkey>
+# blob: blob_b   repo: repo:my-project
+# features 4  claims 5 (5 verified)
+# chain valid ✓
+# signature valid ✓   attests: blob_a…  signer: <pubkey>…
+```
+
+---
+
+## AI coding assistant integration
+
+**Skill installer** — teaches your AI assistant the verity model, CLI, and API:
+
+```bash
+verity install-skill                    # Claude Code (global CLAUDE.md)
 verity install-skill --tool cursor      # Cursor → .cursorrules
 verity install-skill --tool windsurf    # Windsurf → .windsurfrules
 verity install-skill --tool codex       # OpenAI Codex → AGENTS.md
 verity install-skill --tool aider       # Aider → CONVENTIONS.md
 ```
 
-**MCP server:** expose all verity tools natively to any MCP-compatible editor:
+**MCP server** — expose all verity tools natively to any MCP-compatible editor:
 
 ```bash
 pip install "walrus-verity[mcp]"
@@ -72,57 +136,45 @@ Add to your `claude_mcp_config.json` (or equivalent):
 }
 ```
 
-Available MCP tools: `verity_init`, `verity_add_feature`, `verity_add_claim`, `verity_add_test`, `verity_add_evidence`, `verity_set_status`, `verity_validate`, `verity_release`, `verity_push`, `verity_pull`, `verity_log`, `verity_status`.
+| MCP tool | Description |
+|---|---|
+| `verity_init` | Create `verity.json` |
+| `verity_add_feature / claim / test / evidence` | Add chain entities |
+| `verity_set_status` | Promote status after chain is wired |
+| `verity_set_status_batch` | Promote multiple entities atomically in one call |
+| `verity_validate` | Validate the full chain |
+| `verity_release` | Fail-closed release |
+| `verity_push / pull` | Walrus push and pull |
+| `verity_log` | Push history |
+| `verity_status` | Entity counts + validation summary |
+| `verity_diff` | Diff two Walrus blob snapshots |
+| `verity_export` | Export to SARIF, JUnit, or SPDX |
+| `verity_sign` | Sign the latest push with an Ed25519 key |
+| `verity_verify` | Fetch blob, validate chain, check signature |
+| `verity_recall` | Natural language query against MemWal |
 
 ---
 
-## Quick start
-
-The CLI validates on every write, so build the chain with neutral statuses first, then promote them once everything is linked.
+## Export and interop
 
 ```bash
-verity init --repo-id repo:my-project
-
-# Phase 1 — build the chain (neutral statuses)
-verity add feature feat:auth "User authentication"
-verity add claim   clm:auth.t1 "Login succeeds"  --feature feat:auth
-verity add test    tst:auth.unit "Unit test"      --claim clm:auth.t1 --kind unit --path tests/test_auth.py
-verity add evidence evd:auth.ci "CI run"          --test tst:auth.unit --artifact artifacts/ci.json --status passed
-
-# Phase 2 — promote statuses (edit verity.json: set claim → verified, test → passing)
-verity validate      # → OK
-verity release 1.0.0
-verity push          # → blob: AbCdEfGh…
-
-# Any agent, any machine, any future session:
-verity pull AbCdEfGh…
+verity export --format sarif    # SARIF 2.1.0 — security findings dashboards
+verity export --format junit    # JUnit XML  — CI test result viewers
+verity export --format spdx     # SPDX 2.3   — software bill of materials
 ```
 
-> **Why two phases?** verity validates after every `add` command. Setting `--status verified` on a claim before its test exists will fail. Build the full chain first, then mark statuses.
->
-> Using the **Python API** instead? Statuses can be set at add time; validation is deferred until you call `validate()` or `push()`. See [Python API](docs/python-api.md).
+---
 
-```
-$ verity validate
-OK
+## Recall
 
-$ verity release 1.0.0
-Released rel:1.0.0 at 2026-05-23T19:08:25Z
-  claims: clm:auth.t1
+Push with MemWal to register semantic memories alongside the Walrus blob:
 
-$ verity push
-blob: AbCdEfGhIjKlMnOpQrStUvWxYz0123456789
+```bash
+verity push --backend memwal
 
-$ verity log
-  1.  [walrus]  2026-05-23T19:08:25Z  AbCdEfGhIjKlMnOpQrStUvWxYz0123456789
-
-$ verity status
-repo:my-project  schema 0.1.0
-features   1   claims     1  (1 verified, 0 open)
-tests      1  (1 passing)
-evidence   1  (1 passed)
-releases   1   latest: rel:1.0.0  blob: AbCdEfGh…
-valid      ✓
+verity recall "what features have we built"
+verity recall "what claims are verified"
+verity recall "what was the latest release"
 ```
 
 ---
@@ -131,14 +183,13 @@ valid      ✓
 
 | Topic | |
 |---|---|
-| [CLI Reference](docs/cli.md) | All commands: `init`, `add`, `validate`, `release`, `push`, `pull`, `log`, `site`, `context`, `install-skill` |
+| [CLI Reference](docs/cli.md) | All commands with flags and examples |
 | [MCP Server](plugins/verity-agent/README.md) | `verity-mcp`: expose verity tools to any MCP-compatible editor |
 | [Python API](docs/python-api.md) | `VeritySession`, low-level functions, custom backends |
 | [Schema Reference](docs/schema.md) | `verity.json` fields, ID prefixes, status values, validation rules |
 | [Walrus Setup](docs/walrus.md) | Testnet, mainnet, custom endpoints |
 | [MemWal Setup](docs/memwal.md) | Env vars, delegate keys, namespace isolation |
 | [Multi-Agent Patterns](docs/multi-agent.md) | Handoff pattern, audit trail, dry-run |
-| [Scripts](docs/scripts.md) | `store_project_context.py`: seed MemWal with verity project knowledge |
 
 ---
 
@@ -150,7 +201,7 @@ The proof-chain model (`feature → claim → test → evidence → release`) is
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Run tests with `uv run pytest`.
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
