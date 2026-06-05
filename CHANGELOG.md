@@ -11,6 +11,13 @@ This project uses [semantic versioning](https://semver.org/).
 
 ---
 
+## [0.3.1] — 2026-06-05
+
+### Added
+- **`verity_set_status_batch` MCP tool** — promote multiple entities in a single call; accepts a list of `{"id", "status"}` pairs, applies all changes atomically, validates once, saves once; rolls back all changes if validation fails
+
+---
+
 ## [0.3.0] — 2026-06-04
 
 ### Added

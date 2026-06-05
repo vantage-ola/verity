@@ -588,6 +588,7 @@ Or with `uvx` (no install needed):
 | `verity_add_test` | Add a Test (`tst:`) |
 | `verity_add_evidence` | Add Evidence (`evd:`) |
 | `verity_set_status` | Promote status after chain is wired |
+| `verity_set_status_batch` | Promote multiple entities atomically in one call |
 | `verity_validate` | Validate the full chain |
 | `verity_release` | Create a fail-closed release |
 | `verity_push` | Push to Walrus, returns `blob_id` |

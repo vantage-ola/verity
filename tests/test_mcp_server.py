@@ -20,6 +20,7 @@ from verity.mcp_server import (
     verity_recall,
     verity_release,
     verity_set_status,
+    verity_set_status_batch,
     verity_sign,
     verity_status,
     verity_validate,
@@ -165,6 +166,65 @@ def test_set_status_rejects_premature_verified(tmp_path):
     # No test or evidence — trying to set verified should be rejected
     result = verity_set_status("clm:x.t1", "verified", registry_path=rp)
     assert "rejected" in result.lower() or "error" in result.lower()
+
+
+# ---------------------------------------------------------------------------
+# verity_set_status_batch
+# ---------------------------------------------------------------------------
+
+
+def test_set_status_batch_promotes_full_chain(tmp_path):
+    rp = _reg_path(tmp_path)
+    verity_init(registry_path=rp)
+    verity_add_feature("feat:x", "X", registry_path=rp)
+    verity_add_claim("clm:x.t1", "X works", feature_id="feat:x", registry_path=rp)
+    verity_add_test("tst:x.unit", claim_id="clm:x.t1", path="tests/test_x.py", registry_path=rp)
+    verity_add_evidence("evd:x.ci", test_id="tst:x.unit", artifact_path="reports/x.json", registry_path=rp)
+    result = verity_set_status_batch(
+        [
+            {"id": "evd:x.ci", "status": "passed"},
+            {"id": "tst:x.unit", "status": "passing"},
+            {"id": "clm:x.t1", "status": "verified"},
+        ],
+        registry_path=rp,
+    )
+    assert "Updated" in result
+    assert "evd:x.ci" in result
+    assert "clm:x.t1" in result
+    assert verity_validate(registry_path=rp) == "OK"
+
+
+def test_set_status_batch_rejects_all_on_validation_failure(tmp_path):
+    rp = _reg_path(tmp_path)
+    verity_init(registry_path=rp)
+    verity_add_feature("feat:x", "X", registry_path=rp)
+    verity_add_claim("clm:x.t1", "X works", feature_id="feat:x", registry_path=rp)
+    # No test or evidence — verified should be rejected, nothing saved
+    result = verity_set_status_batch(
+        [{"id": "clm:x.t1", "status": "verified"}],
+        registry_path=rp,
+    )
+    assert "rejected" in result.lower()
+
+
+def test_set_status_batch_unknown_id(tmp_path):
+    rp = _reg_path(tmp_path)
+    verity_init(registry_path=rp)
+    result = verity_set_status_batch(
+        [{"id": "clm:ghost", "status": "verified"}],
+        registry_path=rp,
+    )
+    assert "Error" in result
+
+
+def test_set_status_batch_missing_keys(tmp_path):
+    rp = _reg_path(tmp_path)
+    verity_init(registry_path=rp)
+    result = verity_set_status_batch(
+        [{"id": "clm:x.t1"}],  # missing "status"
+        registry_path=rp,
+    )
+    assert "Error" in result
 
 
 # ---------------------------------------------------------------------------
