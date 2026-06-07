@@ -11,6 +11,14 @@ This project uses [semantic versioning](https://semver.org/).
 
 ---
 
+## [0.3.2] — 2026-06-07
+
+### Fixed
+- **Validation depth** — `validate()` now checks: passing tests must have `passed` evidence (not just any evidence); release `claim_ids` must reference `verified` claims; T1 verified claims must have at least one test backed by `passed` evidence
+- **DRY release** — `create_release()` now calls `validate()` first instead of reimplementing chain traversal; also catches duplicate release IDs (`rel:x` already exists)
+
+---
+
 ## [0.3.1] — 2026-06-05
 
 ### Added
