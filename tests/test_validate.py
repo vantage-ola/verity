@@ -62,3 +62,51 @@ def test_passing_test_without_evidence():
     )
     errors = validate(registry)
     assert any("passing" in e and "tst:auth.unit" in e for e in errors)
+
+
+def test_passing_test_with_only_failed_evidence():
+    registry = Registry(
+        repo_id="repo:test",
+        features=[Feature(id="feat:auth", title="Auth")],
+        claims=[Claim(id="clm:auth.t1", feature_id="feat:auth", title="C")],
+        tests=[Test(id="tst:auth.unit", claim_id="clm:auth.t1", kind="unit", path="t.py", status="passing")],
+        evidence=[Evidence(id="evd:run1", test_id="tst:auth.unit", artifact_path="a.json", status="failed")],
+    )
+    errors = validate(registry)
+    assert any("no 'passed' evidence" in e for e in errors)
+
+
+def test_passing_test_with_only_collected_evidence():
+    registry = Registry(
+        repo_id="repo:test",
+        features=[Feature(id="feat:auth", title="Auth")],
+        claims=[Claim(id="clm:auth.t1", feature_id="feat:auth", title="C")],
+        tests=[Test(id="tst:auth.unit", claim_id="clm:auth.t1", kind="unit", path="t.py", status="passing")],
+        evidence=[Evidence(id="evd:run1", test_id="tst:auth.unit", artifact_path="a.json", status="collected")],
+    )
+    errors = validate(registry)
+    assert any("no 'passed' evidence" in e for e in errors)
+
+
+def test_release_includes_unverified_claim():
+    from verity.models import Release
+    registry = Registry(
+        repo_id="repo:test",
+        features=[Feature(id="feat:auth", title="Auth")],
+        claims=[Claim(id="clm:auth.t1", feature_id="feat:auth", title="Open")],  # status=open
+        releases=[Release(id="rel:1.0.0", version="1.0.0", timestamp="2026-01-01T00:00:00Z", claim_ids=["clm:auth.t1"])],
+    )
+    errors = validate(registry)
+    assert any("not 'verified'" in e for e in errors)
+
+
+def test_t1_claim_verified_without_passed_evidence():
+    registry = Registry(
+        repo_id="repo:test",
+        features=[Feature(id="feat:auth", title="Auth")],
+        claims=[Claim(id="clm:auth.t1", feature_id="feat:auth", title="C", tier="T1", status="verified")],
+        tests=[Test(id="tst:auth.unit", claim_id="clm:auth.t1", kind="unit", path="t.py", status="passing")],
+        evidence=[Evidence(id="evd:run1", test_id="tst:auth.unit", artifact_path="a.json", status="collected")],
+    )
+    errors = validate(registry)
+    assert any("T1" in e and "passed" in e for e in errors)

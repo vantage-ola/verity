@@ -49,7 +49,7 @@ def test_release_fails_no_passed_evidence():
             Evidence(id="evd:run1", test_id="tst:auth.unit", artifact_path="a.json", status="failed")
         ],
     )
-    with pytest.raises(VerityReleaseError, match="no test with passed evidence"):
+    with pytest.raises(VerityReleaseError, match="passed"):
         create_release(registry, "0.1.0")
 
 
@@ -57,3 +57,22 @@ def test_release_timestamp_format(minimal_registry):
     release = create_release(minimal_registry, "1.0.0")
     assert release.timestamp.endswith("Z")
     assert "T" in release.timestamp
+
+
+def test_release_duplicate_version_raises(minimal_registry):
+    create_release(minimal_registry, "1.0.0")
+    with pytest.raises(VerityReleaseError, match="already exists"):
+        create_release(minimal_registry, "1.0.0")
+
+
+def test_release_fails_when_registry_invalid():
+    """create_release now calls validate() first — a broken chain is caught early."""
+    registry = Registry(
+        repo_id="repo:test",
+        features=[Feature(id="feat:auth", title="Auth")],
+        claims=[Claim(id="clm:auth.t1", feature_id="feat:auth", title="C", status="verified")],
+        tests=[Test(id="tst:auth.unit", claim_id="clm:auth.t1", kind="unit", path="t.py", status="passing")],
+        evidence=[Evidence(id="evd:run1", test_id="tst:auth.unit", artifact_path="a.json", status="failed")],
+    )
+    with pytest.raises(VerityReleaseError, match="validation errors"):
+        create_release(registry, "1.0.0")

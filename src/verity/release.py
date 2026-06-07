@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from verity.models import Registry, Release
+from verity.validate import validate
 
 
 class VerityReleaseError(Exception):
@@ -10,31 +11,20 @@ class VerityReleaseError(Exception):
 
 
 def create_release(registry: Registry, version: str) -> Release:
+    errors = validate(registry)
+    if errors:
+        raise VerityReleaseError(
+            "Registry has validation errors:\n" + "\n".join(f"  {e}" for e in errors)
+        )
+
     verified_claims = [c for c in registry.claims if c.status == "verified"]
     if not verified_claims:
         raise VerityReleaseError("No verified claims found — nothing to release")
 
-    test_ids_by_claim: dict[str, list[str]] = {}
-    for test in registry.tests:
-        test_ids_by_claim.setdefault(test.claim_id, []).append(test.id)
-
-    passed_evidence_by_test: dict[str, bool] = {}
-    for evd in registry.evidence:
-        if evd.status == "passed":
-            passed_evidence_by_test[evd.test_id] = True
-
-    for claim in verified_claims:
-        linked_tests = test_ids_by_claim.get(claim.id, [])
-        if not linked_tests:
-            raise VerityReleaseError(
-                f"Claim {claim.id} is verified but has no linked tests"
-            )
-        if not any(passed_evidence_by_test.get(tid) for tid in linked_tests):
-            raise VerityReleaseError(
-                f"Claim {claim.id} has no test with passed evidence"
-            )
-
     release_id = f"rel:{version}"
+    if any(r.id == release_id for r in registry.releases):
+        raise VerityReleaseError(f"Release {release_id} already exists")
+
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     release = Release(
         id=release_id,
