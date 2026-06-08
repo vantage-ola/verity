@@ -11,6 +11,13 @@ This project uses [semantic versioning](https://semver.org/).
 
 ---
 
+## [0.3.3] — 2026-06-07
+
+### Fixed
+- **Retry logic** — `WalrusBackend.store()` and `fetch()` now retry up to 3 times with exponential backoff (1 s, 2 s) on 5xx responses and transport-level failures (`httpx.TransportError`); 4xx errors are not retried; new `WalrusTransientError` subclass distinguishes transient from permanent failures
+
+---
+
 ## [0.3.2] — 2026-06-07
 
 ### Fixed
