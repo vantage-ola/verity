@@ -11,6 +11,13 @@ This project uses [semantic versioning](https://semver.org/).
 
 ---
 
+## [0.3.4] — 2026-06-09
+
+### Fixed
+- **Type-safe memwal parsing** — `MemWalBackend.store()` now parses blob content via `Registry.model_validate()` instead of raw `dict.get()` calls; all field access is typed (`.repo_id`, `.features`, `.claims`, `.releases`, `.context`); invalid blobs that fail model validation fall back gracefully (MemWal pointer skipped, Walrus blob still stored)
+
+---
+
 ## [0.3.3] — 2026-06-07
 
 ### Fixed
