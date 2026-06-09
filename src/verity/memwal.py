@@ -31,6 +31,7 @@ from __future__ import annotations
 import json
 import os
 
+from verity.models import Registry
 from verity.walrus import (
     AGGREGATOR_URL as _WALRUS_AGGREGATOR_URL,
     PUBLISHER_URL as _WALRUS_PUBLISHER_URL,
@@ -122,13 +123,18 @@ class MemWalBackend:
 
         # Register semantic pointer so agents can recall("verity registry for repo:X")
         try:
-            data = json.loads(content)
-            repo_id = data.get("repo_id", "unknown")
-            context_entries = data.get("context", [])
+            reg = Registry.model_validate(json.loads(content))
+            repo_id = reg.repo_id
+            context_entries = reg.context
+            features = reg.features
+            claims = reg.claims
+            releases = reg.releases
         except Exception:
-            data = {}
             repo_id = "unknown"
             context_entries = []
+            features = []
+            claims = []
+            releases = []
 
         try:
             self._client.remember_and_wait(
@@ -139,21 +145,18 @@ class MemWalBackend:
             pass  # non-fatal — blob is already on Walrus
 
         for entry in context_entries:
-            key = entry.get("key", "")
-            value = entry.get("value", "")
-            if key and value:
+            if entry.key and entry.value:
                 try:
                     self._client.remember_and_wait(
-                        f"verity context key={key} repo={repo_id}: {value}",
+                        f"verity context key={entry.key} repo={repo_id}: {entry.value}",
                         namespace=self.namespace,
                     )
                 except _SdkError:
                     pass  # non-fatal
 
-        features = data.get("features", [])
         if features:
             summary = "; ".join(
-                f"{f['title']} ({f['id']}, {f.get('status', 'active')})" for f in features
+                f"{f.title} ({f.id}, {f.status})" for f in features
             )
             try:
                 self._client.remember_and_wait(
@@ -163,10 +166,10 @@ class MemWalBackend:
             except _SdkError:
                 pass
 
-        verified = [c for c in data.get("claims", []) if c.get("status") == "verified"]
+        verified = [c for c in claims if c.status == "verified"]
         if verified:
             summary = "; ".join(
-                f"{c['title']} ({c['id']}, {c.get('tier', 'T1')})" for c in verified
+                f"{c.title} ({c.id}, {c.tier})" for c in verified
             )
             try:
                 self._client.remember_and_wait(
@@ -176,13 +179,11 @@ class MemWalBackend:
             except _SdkError:
                 pass
 
-        releases = data.get("releases", [])
         if releases:
             latest = releases[-1]
-            n = len(latest.get("claim_ids", []))
             try:
                 self._client.remember_and_wait(
-                    f"verity latest-release repo={repo_id} version={latest['version']} at={latest['timestamp']}: {n} claims",
+                    f"verity latest-release repo={repo_id} version={latest.version} at={latest.timestamp}: {len(latest.claim_ids)} claims",
                     namespace=self.namespace,
                 )
             except _SdkError:

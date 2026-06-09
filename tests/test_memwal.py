@@ -183,6 +183,18 @@ def test_store_non_json_content_does_not_raise() -> None:
     assert "unknown" in text
 
 
+def test_store_invalid_registry_schema_falls_back_gracefully() -> None:
+    """Blobs that parse as JSON but fail Registry.model_validate() are handled gracefully."""
+    backend, mock_memwal, _ = _backend()
+    # valid JSON but not a valid Registry (missing repo_id, wrong field types)
+    malformed = b'{"schema_version": "0.1.0", "features": "not-a-list"}'
+    result = backend.store(malformed)
+    assert result == FAKE_BLOB_ID
+    # falls back to "unknown" repo_id
+    text = mock_memwal.remember_and_wait.call_args.args[0]
+    assert "unknown" in text
+
+
 def test_store_context_nonfatal_on_memwal_error() -> None:
     from memwal import MemWalError as SdkError
     from verity.models import ContextEntry, Registry
