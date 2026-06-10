@@ -224,7 +224,7 @@ export function Landing({ onDocs }: { onDocs: () => void }) {
           <span className="v-mono" style={{
             fontSize: 11, color: 'var(--muted)', padding: '3px 7px',
             border: '1px solid var(--border)', marginLeft: 6,
-          }}>v0.3.10</span>
+          }}>v0.3.11</span>
         </div>
         <nav style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
           <div className="v-nav-text">

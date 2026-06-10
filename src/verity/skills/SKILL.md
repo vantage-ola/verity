@@ -4,7 +4,7 @@ Use this skill when working with the `verity` proof-chain registry — building 
 
 **Package**: `walrus-verity` on PyPI  
 **Repo**: `~/work/verity/`  
-**Version**: 0.3.10
+**Version**: 0.3.11
 
 ---
 
@@ -48,6 +48,7 @@ verity validate
 verity release 1.0.0
 verity push                        # Walrus (default)
 verity push --backend memwal       # Walrus + MemWal semantic pointer
+verity push --upload-artifacts     # upload local artifact files first, rewrite paths to walrus://
 
 # Pull a blob (safe by default — won't overwrite existing verity.json)
 verity pull <blob_id>              # errors if verity.json already exists

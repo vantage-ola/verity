@@ -11,6 +11,14 @@ This project uses [semantic versioning](https://semver.org/).
 
 ---
 
+## [0.3.11] — 2026-06-10
+
+### Added
+- **`verity push --upload-artifacts`** — before pushing the registry, uploads every local `artifact_path` file to Walrus and rewrites the field to `walrus://<blob_id>`; entries already at `walrus://` are skipped (idempotent re-runs); missing files are skipped with no error; the proof chain becomes fully self-contained — anyone with the root blob ID can trace back to the raw artifacts
+- **`VeritySession.upload_artifacts()`** — Python API method that uploads local artifact files and returns a `dict[evidence_id, blob_id]` mapping; raises `VerityPushError` if no backend configured
+
+---
+
 ## [0.3.10] — 2026-06-10
 
 ### Added

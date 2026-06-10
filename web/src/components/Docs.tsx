@@ -210,11 +210,12 @@ function CliRef() {
       </Code>
 
       <H2>verity push</H2>
-      <P>Serialize the registry to canonical JSON and upload to Walrus (or MemWal). Records the blob ID locally.</P>
-      <Code>verity push [<span className="c-flag">--backend</span> walrus|memwal] [<span className="c-flag">--epochs</span> N]</Code>
+      <P>Serialize the registry to canonical JSON and upload to Walrus (or MemWal). Records the blob ID locally. Pass <InlineCode>--upload-artifacts</InlineCode> to also upload local evidence artifact files — their paths are rewritten to <InlineCode>walrus://&lt;blob_id&gt;</InlineCode>, making the proof chain fully self-contained.</P>
+      <Code>verity push [<span className="c-flag">--upload-artifacts</span>] [<span className="c-flag">--backend</span> walrus|memwal] [<span className="c-flag">--epochs</span> N]</Code>
       <Table
         headers={['Option', 'Default', 'Description']}
         rows={[
+          ['--upload-artifacts', 'off', 'Upload local artifact files before pushing; rewrites artifact_path to walrus://…'],
           ['--backend', 'walrus', 'Storage backend'],
           ['--epochs', '5', 'Walrus storage duration in epochs'],
         ]}
@@ -222,8 +223,9 @@ function CliRef() {
       <Code>
         <span className="c-prompt">$ </span>verity push{'\n'}
         <span className="c-out">blob: AbCdEfGhIjKlMnOpQrStUvWxYz…</span>{'\n\n'}
-        <span className="c-prompt">$ </span>verity push <span className="c-flag">--backend</span> memwal{'\n'}
-        <span className="c-out">blob: AbCdEfGhIjKlMnOpQrStUvWxYz…</span>
+        <span className="c-prompt">$ </span>verity push <span className="c-flag">--upload-artifacts</span>{'\n'}
+        <span className="c-out">  evd:auth.ci              → walrus://AbCdEfGh…</span>{'\n'}
+        <span className="c-out">blob: XyZRegistryBlob…</span>
       </Code>
 
       <H2>verity pull</H2>
@@ -770,7 +772,7 @@ export function Docs({ onBack }: { onBack: () => void }) {
         <aside className="v-docs-sidebar">
           <div style={{ padding: '32px 24px' }}>
             <div className="v-overline" style={{ marginBottom: 16, paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
-              v0.3.10
+              v0.3.11
             </div>
             {SECTIONS.map(s => (
               <button
