@@ -999,3 +999,101 @@ def test_verify_no_sig_with_pubkey_exits_1(tmp_path: Path) -> None:
         result = runner.invoke(app, ["verify", "UnsignedBlob", "--pubkey-b64", pubkey_to_b64(pub)])
     assert result.exit_code == 1
     assert "no signature" in result.output
+
+
+# ---------------------------------------------------------------------------
+# watch
+# ---------------------------------------------------------------------------
+
+def _make_sleep_side_effect(n: int = 1):
+    """Returns a side-effect that raises KeyboardInterrupt after n calls."""
+    calls: list[int] = []
+
+    def _side_effect(_: float) -> None:
+        calls.append(1)
+        if len(calls) >= n:
+            raise KeyboardInterrupt
+
+    return _side_effect
+
+
+def test_watch_no_change_exits_cleanly(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner.invoke(app, ["init"])
+    with patch("verity.cli.main.time.sleep", side_effect=_make_sleep_side_effect(1)):
+        result = runner.invoke(app, ["watch"])
+    assert result.exit_code == 0
+    assert "Watching" in result.output
+    assert "Stopped" in result.output
+
+
+def test_watch_detects_valid_change(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner.invoke(app, ["init"])
+    reg_path = tmp_path / ".verity" / "registry.json"
+    original = reg_path.read_bytes()
+
+    call_count = 0
+
+    def _sleep_and_modify(_: float) -> None:
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            reg_path.write_bytes(original + b" ")
+        else:
+            raise KeyboardInterrupt
+
+    with patch("verity.cli.main.time.sleep", side_effect=_sleep_and_modify):
+        result = runner.invoke(app, ["watch"])
+    assert result.exit_code == 0
+    assert "changed — valid (no push)" in result.output
+
+
+def test_watch_detects_invalid_change(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner.invoke(app, ["init"])
+    reg_path = tmp_path / ".verity" / "registry.json"
+
+    import json as _json
+    data = _json.loads(reg_path.read_text())
+    # Create a broken claim link (references non-existent feature)
+    data["claims"] = [{"id": "clm:x", "feature_id": "feat:missing", "title": "t", "tier": "T1", "status": "open"}]
+    call_count = 0
+
+    def _sleep_and_corrupt(_: float) -> None:
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            reg_path.write_text(_json.dumps(data))
+        else:
+            raise KeyboardInterrupt
+
+    with patch("verity.cli.main.time.sleep", side_effect=_sleep_and_corrupt):
+        result = runner.invoke(app, ["watch"])
+    assert result.exit_code == 0
+    assert "validation error" in result.output
+
+
+def test_watch_auto_push_on_valid_change(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner.invoke(app, ["init"])
+    reg_path = tmp_path / ".verity" / "registry.json"
+    original = reg_path.read_bytes()
+
+    call_count = 0
+
+    def _sleep_and_modify(_: float) -> None:
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            reg_path.write_bytes(original + b" ")
+        else:
+            raise KeyboardInterrupt
+
+    body = {"newlyCreated": {"blobObject": {"blobId": FAKE_BLOB}}}
+    with patch("verity.cli.main.time.sleep", side_effect=_sleep_and_modify), \
+         patch("verity.walrus.httpx.Client") as MockClient:
+        MockClient.return_value.__enter__.return_value.put.return_value = _mock_resp(200, body)
+        result = runner.invoke(app, ["watch", "--auto-push"])
+    assert result.exit_code == 0
+    assert f"pushed: {FAKE_BLOB}" in result.output

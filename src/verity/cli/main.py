@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import hashlib
 import os
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Annotated
@@ -57,6 +59,10 @@ def _get_backend(backend_name: str, epochs: int = 5) -> StorageBackend:
             typer.echo(f"MemWal config error: {e}", err=True)
             raise typer.Exit(1)
     return WalrusBackend(epochs=epochs)
+
+
+def _file_hash(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 @app.command()
@@ -262,6 +268,56 @@ def push_cmd(
     save_registry(registry, path)
 
     typer.echo(f"blob: {blob_id}")
+
+
+@app.command("watch")
+def watch_cmd(
+    interval: Annotated[float, typer.Option("--interval", "-i", help="Poll interval in seconds.")] = 5.0,
+    auto_push: Annotated[bool, typer.Option("--auto-push", help="Push to Walrus on each valid change.")] = False,
+    backend_name: BackendChoice = "walrus",
+    epochs: Annotated[int, typer.Option("--epochs", help="Walrus storage epochs.")] = 5,
+) -> None:
+    """Watch the registry for changes; validate (and optionally push) on each update."""
+    path, _ = _load()
+    last_hash = _file_hash(path)
+    push_label = "on" if auto_push else "off"
+    typer.echo(f"Watching {path}  (interval: {interval}s, auto-push: {push_label})")
+    try:
+        while True:
+            time.sleep(interval)
+            if not path.exists():
+                typer.echo(f"Registry removed: {path}", err=True)
+                raise typer.Exit(1)
+            current_hash = _file_hash(path)
+            if current_hash == last_hash:
+                continue
+            last_hash = current_hash
+            ts = datetime.now(timezone.utc).strftime("%H:%M:%SZ")
+            registry = load_registry(path)
+            errors = validate(registry)
+            if errors:
+                typer.echo(f"[{ts}] changed — {len(errors)} validation error(s):")
+                for e in errors:
+                    typer.echo(f"  - {e}")
+                continue
+            if auto_push:
+                backend = _get_backend(backend_name, epochs=epochs)
+                content = canonical_json(registry).encode("utf-8")
+                try:
+                    blob_id = backend.store(content)
+                    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+                    registry.pushes.append(PushRecord(blob_id=blob_id, timestamp=timestamp, backend=backend_name))  # type: ignore[arg-type]
+                    if registry.releases:
+                        registry.releases[-1].walrus_blob_id = blob_id
+                    save_registry(registry, path)
+                    last_hash = _file_hash(path)
+                    typer.echo(f"[{ts}] changed — valid — pushed: {blob_id}")
+                except (WalrusError, MemWalError) as e:
+                    typer.echo(f"[{ts}] changed — valid — push failed: {e}", err=True)
+            else:
+                typer.echo(f"[{ts}] changed — valid (no push)")
+    except KeyboardInterrupt:
+        typer.echo("\nStopped.")
 
 
 @app.command("pull")

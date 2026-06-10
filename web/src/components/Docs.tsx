@@ -227,10 +227,24 @@ function CliRef() {
       </Code>
 
       <H2>verity pull</H2>
-      <P>Fetch a registry blob by ID and write it to <InlineCode>verity.json</InlineCode>. Overwrites any existing file.</P>
+      <P>Fetch a registry blob by ID and write it to <InlineCode>.verity/registry.json</InlineCode>. Safe by default — pass <InlineCode>--force</InlineCode> to overwrite an existing file.</P>
       <Code>
         verity pull BLOB_ID [<span className="c-flag">--backend</span> walrus|memwal]{'\n\n'}
         <span className="c-prompt">$ </span>verity pull AbCdEfGhIjKlMnOpQrStUvWxYz…
+      </Code>
+
+      <H2>verity watch</H2>
+      <P>Daemon mode — polls the registry every N seconds, validates on each change, and optionally auto-pushes to Walrus. Never pushes when validation errors exist (fail-closed). Use Ctrl+C to stop.</P>
+      <Code>verity watch [<span className="c-flag">--interval</span> SECONDS] [<span className="c-flag">--auto-push</span>] [<span className="c-flag">--backend</span> walrus|memwal] [<span className="c-flag">--epochs</span> N]</Code>
+      <Code>
+        <span className="c-comm"># watch for changes, print on each update</span>{'\n'}
+        <span className="c-prompt">$ </span>verity watch{'\n'}
+        <span className="c-out">Watching .verity/registry.json  (interval: 5.0s, auto-push: off)</span>{'\n'}
+        <span className="c-out">[12:34:01Z] changed — valid (no push)</span>{'\n\n'}
+        <span className="c-comm"># auto-push every valid change to Walrus</span>{'\n'}
+        <span className="c-prompt">$ </span>verity watch --interval 30 --auto-push{'\n'}
+        <span className="c-out">Watching .verity/registry.json  (interval: 30.0s, auto-push: on)</span>{'\n'}
+        <span className="c-out">[12:34:31Z] changed — valid — pushed: AbCdEfGh…</span>
       </Code>
 
       <H2>verity status</H2>
@@ -756,7 +770,7 @@ export function Docs({ onBack }: { onBack: () => void }) {
         <aside className="v-docs-sidebar">
           <div style={{ padding: '32px 24px' }}>
             <div className="v-overline" style={{ marginBottom: 16, paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
-              v0.3.9
+              v0.3.10
             </div>
             {SECTIONS.map(s => (
               <button

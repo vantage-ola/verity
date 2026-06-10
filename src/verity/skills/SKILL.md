@@ -4,7 +4,7 @@ Use this skill when working with the `verity` proof-chain registry — building 
 
 **Package**: `walrus-verity` on PyPI  
 **Repo**: `~/work/verity/`  
-**Version**: 0.3.9
+**Version**: 0.3.10
 
 ---
 
@@ -52,6 +52,12 @@ verity push --backend memwal       # Walrus + MemWal semantic pointer
 # Pull a blob (safe by default — won't overwrite existing verity.json)
 verity pull <blob_id>              # errors if verity.json already exists
 verity pull <blob_id> --force      # overwrite existing file
+
+# Watch for changes (daemon mode)
+verity watch                       # poll every 5s, print on change
+verity watch --interval 30         # custom poll interval
+verity watch --auto-push           # push to Walrus on each valid change
+verity watch --auto-push --backend memwal  # push to memwal instead
 
 # Recall from MemWal (natural language query)
 verity recall "what features have we built"
