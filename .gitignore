@@ -57,3 +57,4 @@ Thumbs.db
 *.swo
 .env
 .trae/rules/git-commit-message.md
+.mcp.json

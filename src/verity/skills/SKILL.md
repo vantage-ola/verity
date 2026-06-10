@@ -4,7 +4,7 @@ Use this skill when working with the `verity` proof-chain registry — building 
 
 **Package**: `walrus-verity` on PyPI  
 **Repo**: `~/work/verity/`  
-**Version**: 0.3.4
+**Version**: 0.3.5
 
 ---
 

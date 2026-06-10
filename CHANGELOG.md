@@ -11,6 +11,13 @@ This project uses [semantic versioning](https://semver.org/).
 
 ---
 
+## [0.3.5] — 2026-06-10
+
+### Changed
+- **Structured diff** ⚠️ **breaking** — `diff_registries()` now returns a `DiffResult` dataclass instead of a raw string; callers that used the return value as a string must change to `format_diff(diff_registries(...))` — `format_diff` is exported from the public API and produces identical output; `DiffResult` exposes `.added`, `.removed`, `.changed` lists and `.blob_a/.blob_b/.repo_a/.repo_b` metadata; CLI and MCP server updated automatically
+
+---
+
 ## [0.3.4] — 2026-06-09
 
 ### Fixed

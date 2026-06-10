@@ -756,7 +756,7 @@ export function Docs({ onBack }: { onBack: () => void }) {
         <aside className="v-docs-sidebar">
           <div style={{ padding: '32px 24px' }}>
             <div className="v-overline" style={{ marginBottom: 16, paddingBottom: 12, borderBottom: '1px solid var(--border)' }}>
-              v0.3.4
+              v0.3.5
             </div>
             {SECTIONS.map(s => (
               <button
