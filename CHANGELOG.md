@@ -11,6 +11,15 @@ This project uses [semantic versioning](https://semver.org/).
 
 ---
 
+## [0.3.9] — 2026-06-10
+
+### Changed
+- **Default registry path** — `VeritySession`, CLI, and MCP tools now default to `.verity/registry.json` instead of `verity.json` at the repo root, following `.github/`-style conventions
+- **Legacy path fallback** — `registry_path()` detects an existing `verity.json` at the repo root and returns it with a `DeprecationWarning` prompting migration (`mkdir -p .verity && mv verity.json .verity/registry.json`); explicit path arguments are unchanged
+- **Auto-mkdir** — `save_registry()` creates the parent directory (e.g. `.verity/`) on first write so `verity init` works without pre-creating the directory
+
+---
+
 ## [0.3.8] — 2026-06-10
 
 ### Fixed
