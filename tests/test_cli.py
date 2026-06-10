@@ -36,7 +36,7 @@ def _full_registry(tmp_path: Path) -> None:
     runner.invoke(app, ["add", "test", "tst:auth.unit", "Unit", "--claim", "clm:auth.t1", "--kind", "unit", "--path", "t.py"])
     runner.invoke(app, ["add", "evidence", "evd:run1", "Run 1", "--test", "tst:auth.unit", "--artifact", "a.json", "--status", "passed"])
     # patch statuses for release
-    reg_path = tmp_path / "verity.json"
+    reg_path = tmp_path / ".verity" / "registry.json"
     data = json.loads(reg_path.read_text())
     data["claims"][0]["status"] = "verified"
     data["tests"][0]["status"] = "passing"
@@ -50,13 +50,13 @@ def _full_registry(tmp_path: Path) -> None:
 def test_init_creates_file(tmp_path: Path) -> None:
     result = runner.invoke(app, ["init", "--repo-id", "repo:ci", str(tmp_path)])
     assert result.exit_code == 0
-    assert (tmp_path / "verity.json").exists()
+    assert (tmp_path / ".verity" / "registry.json").exists()
     assert "Initialized" in result.stdout
 
 
 def test_init_default_repo_id(tmp_path: Path) -> None:
     runner.invoke(app, ["init", str(tmp_path)])
-    data = json.loads((tmp_path / "verity.json").read_text())
+    data = json.loads((tmp_path / ".verity" / "registry.json").read_text())
     assert data["repo_id"] == "repo:default"
 
 
@@ -159,7 +159,7 @@ def test_validate_broken_exits_nonzero(tmp_path: Path, monkeypatch: pytest.Monke
     monkeypatch.chdir(tmp_path)
     runner.invoke(app, ["init"])
     # add a claim referencing a non-existent feature directly in JSON
-    reg_path = tmp_path / "verity.json"
+    reg_path = tmp_path / ".verity" / "registry.json"
     data = json.loads(reg_path.read_text())
     data["claims"].append({"id": "clm:x.t1", "feature_id": "feat:missing", "title": "bad", "tier": "T1", "status": "open"})
     reg_path.write_text(json.dumps(data, sort_keys=True, separators=(",", ":")))
@@ -224,7 +224,7 @@ def test_push_stores_blob_id_in_release(tmp_path: Path, monkeypatch: pytest.Monk
     with patch("verity.walrus.httpx.Client") as MockClient:
         MockClient.return_value.__enter__.return_value.put.return_value = _mock_resp(200, body)
         runner.invoke(app, ["push"])
-    data = json.loads((tmp_path / "verity.json").read_text())
+    data = json.loads((tmp_path / ".verity" / "registry.json").read_text())
     assert data["releases"][0]["walrus_blob_id"] == FAKE_BLOB
 
 
@@ -250,7 +250,7 @@ def test_pull_restores_registry(tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
         result = runner.invoke(app, ["pull", FAKE_BLOB])
     assert result.exit_code == 0
     assert "Restored" in result.stdout
-    data = json.loads((tmp_path / "verity.json").read_text())
+    data = json.loads((tmp_path / ".verity" / "registry.json").read_text())
     assert data["repo_id"] == "repo:remote"
 
 
@@ -270,12 +270,13 @@ def test_pull_creates_parent_directory(tmp_path: Path) -> None:
         MockClient.return_value.__enter__.return_value.get.return_value = _mock_get_resp(200, content)
         result = runner.invoke(app, ["pull", FAKE_BLOB, "--dir", str(target)])
     assert result.exit_code == 0
-    assert (target / "verity.json").exists()
+    assert (target / ".verity" / "registry.json").exists()
 
 
 def test_pull_fails_if_file_exists_without_force(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
-    (tmp_path / "verity.json").write_text("{}")
+    (tmp_path / ".verity").mkdir()
+    (tmp_path / ".verity" / "registry.json").write_text("{}")
     result = runner.invoke(app, ["pull", FAKE_BLOB])
     assert result.exit_code == 1
     assert "already exists" in result.output
@@ -283,14 +284,15 @@ def test_pull_fails_if_file_exists_without_force(tmp_path: Path, monkeypatch: py
 
 def test_pull_force_overwrites_existing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
-    (tmp_path / "verity.json").write_text("{}")
+    (tmp_path / ".verity").mkdir()
+    (tmp_path / ".verity" / "registry.json").write_text("{}")
     remote_registry = Registry(repo_id="repo:overwritten")
     content = canonical_json(remote_registry).encode()
     with patch("verity.walrus.httpx.Client") as MockClient:
         MockClient.return_value.__enter__.return_value.get.return_value = _mock_get_resp(200, content)
         result = runner.invoke(app, ["pull", FAKE_BLOB, "--force"])
     assert result.exit_code == 0
-    data = json.loads((tmp_path / "verity.json").read_text())
+    data = json.loads((tmp_path / ".verity" / "registry.json").read_text())
     assert data["repo_id"] == "repo:overwritten"
 
 
@@ -349,7 +351,7 @@ def test_context_persisted_in_json(tmp_path: Path, monkeypatch: pytest.MonkeyPat
     monkeypatch.chdir(tmp_path)
     runner.invoke(app, ["init"])
     runner.invoke(app, ["context", "set", "decisions", "chose Option A"])
-    data = json.loads((tmp_path / "verity.json").read_text())
+    data = json.loads((tmp_path / ".verity" / "registry.json").read_text())
     assert any(e["key"] == "decisions" for e in data["context"])
 
 
@@ -397,7 +399,7 @@ def test_status_shows_blob_when_pushed(tmp_path: Path, monkeypatch: pytest.Monke
     monkeypatch.chdir(tmp_path)
     _full_registry(tmp_path)
     runner.invoke(app, ["release", "1.0.0"])
-    reg_path = tmp_path / "verity.json"
+    reg_path = tmp_path / ".verity" / "registry.json"
     data = json.loads(reg_path.read_text())
     data["releases"][0]["walrus_blob_id"] = FAKE_BLOB
     reg_path.write_text(json.dumps(data, sort_keys=True, separators=(",", ":")))
@@ -409,7 +411,7 @@ def test_status_shows_blob_when_pushed(tmp_path: Path, monkeypatch: pytest.Monke
 def test_status_invalid_exits_nonzero(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     runner.invoke(app, ["init"])
-    reg_path = tmp_path / "verity.json"
+    reg_path = tmp_path / ".verity" / "registry.json"
     data = json.loads(reg_path.read_text())
     data["claims"] = [{"id": "clm:x.t1", "feature_id": "feat:missing", "title": "bad", "tier": "T1", "status": "open"}]
     reg_path.write_text(json.dumps(data, sort_keys=True, separators=(",", ":")))
@@ -437,7 +439,7 @@ def test_track_passed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     result = runner.invoke(app, ["track", "feat:auth", "tests/test_auth.py"])
     assert result.exit_code == 0
     assert "Tracked feat:auth" in result.stdout
-    data = json.loads((tmp_path / "verity.json").read_text())
+    data = json.loads((tmp_path / ".verity" / "registry.json").read_text())
     assert data["claims"][0]["id"] == "clm:auth.track"
     assert data["claims"][0]["status"] == "verified"
     assert data["tests"][0]["status"] == "passing"
@@ -450,7 +452,7 @@ def test_track_failed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     runner.invoke(app, ["add", "feature", "feat:auth", "User auth"])
     result = runner.invoke(app, ["track", "feat:auth", "tests/test_auth.py", "--status", "failed"])
     assert result.exit_code == 0
-    data = json.loads((tmp_path / "verity.json").read_text())
+    data = json.loads((tmp_path / ".verity" / "registry.json").read_text())
     assert data["claims"][0]["status"] == "open"
     assert data["tests"][0]["status"] == "failing"
     assert data["evidence"][0]["status"] == "failed"
@@ -462,7 +464,7 @@ def test_track_collected(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Non
     runner.invoke(app, ["add", "feature", "feat:auth", "User auth"])
     result = runner.invoke(app, ["track", "feat:auth", "tests/test_auth.py", "--status", "collected"])
     assert result.exit_code == 0
-    data = json.loads((tmp_path / "verity.json").read_text())
+    data = json.loads((tmp_path / ".verity" / "registry.json").read_text())
     assert data["claims"][0]["status"] == "open"
     assert data["tests"][0]["status"] == "pending"
     assert data["evidence"][0]["status"] == "collected"
@@ -490,7 +492,7 @@ def test_track_id_collision_increments(tmp_path: Path, monkeypatch: pytest.Monke
     runner.invoke(app, ["track", "feat:auth", "tests/test_auth.py"])
     result = runner.invoke(app, ["track", "feat:auth", "tests/test_auth2.py"])
     assert result.exit_code == 0
-    data = json.loads((tmp_path / "verity.json").read_text())
+    data = json.loads((tmp_path / ".verity" / "registry.json").read_text())
     claim_ids = [c["id"] for c in data["claims"]]
     assert "clm:auth.track" in claim_ids
     assert "clm:auth.track.2" in claim_ids
@@ -501,7 +503,7 @@ def test_track_custom_title(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> 
     runner.invoke(app, ["init"])
     runner.invoke(app, ["add", "feature", "feat:auth", "Auth"])
     runner.invoke(app, ["track", "feat:auth", "tests/test.py", "--title", "My custom claim"])
-    data = json.loads((tmp_path / "verity.json").read_text())
+    data = json.loads((tmp_path / ".verity" / "registry.json").read_text())
     assert data["claims"][0]["title"] == "My custom claim"
 
 
@@ -530,7 +532,7 @@ def test_log_shows_entries(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> N
     monkeypatch.chdir(tmp_path)
     runner.invoke(app, ["init"])
     # inject a push record directly
-    reg_path = tmp_path / "verity.json"
+    reg_path = tmp_path / ".verity" / "registry.json"
     data = json.loads(reg_path.read_text())
     data["pushes"] = [{"blob_id": "blob-abc", "timestamp": "2024-01-01T00:00:00Z", "backend": "walrus"}]
     reg_path.write_text(json.dumps(data, sort_keys=True, separators=(",", ":")))
@@ -862,7 +864,7 @@ def _registry_with_push(tmp_path: Path) -> tuple[Path, str]:
     reg = Registry(repo_id="repo:test")
     blob_id = "FakeBlob123abc"
     reg.pushes.append(PushRecord(blob_id=blob_id, timestamp=datetime.now(timezone.utc).isoformat()))
-    reg_path = tmp_path / "verity.json"
+    reg_path = tmp_path / ".verity" / "registry.json"
     save_registry(reg, reg_path)
     key_path = tmp_path / "signing.key"
     runner.invoke(app, ["keygen", "--key", str(key_path), "--pubkey", str(tmp_path / "signing.pub")])
@@ -875,7 +877,7 @@ def test_sign_updates_push_record(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
     result = runner.invoke(app, ["sign", "--key", str(key_path)])
     assert result.exit_code == 0, result.output
     assert blob_id in result.stdout
-    data = json.loads((tmp_path / "verity.json").read_text())
+    data = json.loads((tmp_path / ".verity" / "registry.json").read_text())
     assert data["pushes"][-1]["signature"] is not None
     assert data["pushes"][-1]["signer_pubkey"] is not None
 

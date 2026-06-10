@@ -34,7 +34,7 @@ BackendChoice = Annotated[str, typer.Option("--backend", "-b", help="Storage bac
 def _load(directory: Path = Path(".")) -> tuple[Path, Registry]:
     path = registry_path(directory)
     if not path.exists():
-        typer.echo(f"No verity.json found in {directory}. Run 'verity init' first.", err=True)
+        typer.echo(f"No registry found in {directory}. Run 'verity init' first.", err=True)
         raise typer.Exit(1)
     return path, load_registry(path)
 
@@ -64,7 +64,7 @@ def init(
     repo_id: Annotated[str, typer.Option("--repo-id", help="Registry repo ID")] = "repo:default",
     directory: Annotated[Path, typer.Argument()] = Path("."),
 ) -> None:
-    """Create verity.json in the current directory."""
+    """Create .verity/registry.json in the current directory."""
     path = registry_path(directory)
     if path.exists():
         typer.echo(f"{path} already exists.", err=True)
@@ -269,9 +269,9 @@ def pull_cmd(
     blob_id: Annotated[str, typer.Argument(help="Walrus blob ID")],
     directory: Annotated[Path, typer.Option("--dir", help="Target directory")] = Path("."),
     backend_name: BackendChoice = "walrus",
-    force: Annotated[bool, typer.Option("--force", help="Overwrite existing verity.json")] = False,
+    force: Annotated[bool, typer.Option("--force", help="Overwrite existing registry file")] = False,
 ) -> None:
-    """Fetch a registry from Walrus (or MemWal) and write it to verity.json."""
+    """Fetch a registry from Walrus (or MemWal) and write it to the registry file."""
     backend = _get_backend(backend_name)
 
     path = registry_path(directory)

@@ -21,7 +21,7 @@ from pathlib import Path
 
 from verity.backends import StorageBackend
 from verity.models import Claim, ContextEntry, Evidence, Feature, PushRecord, Registry, Release, Test
-from verity.registry import canonical_json, load_registry, save_registry
+from verity.registry import canonical_json, load_registry, registry_path, save_registry
 from verity.release import  create_release
 from verity.validate import validate
 
@@ -47,11 +47,11 @@ class VeritySession:
 
     def __init__(
         self,
-        path: str | Path = "verity.json",
+        path: str | Path | None = None,
         *,
         backend: StorageBackend | None = None,
     ) -> None:
-        self.path = Path(path)
+        self.path = Path(path) if path is not None else registry_path()
         self._backend = backend
 
     # --- registry I/O ---

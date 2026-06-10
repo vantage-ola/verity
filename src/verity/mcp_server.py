@@ -43,7 +43,7 @@ def _session(registry_path: str) -> VeritySession:
 
 
 @mcp.tool()
-def verity_init(registry_path: str = "verity.json", repo_id: str = "repo:default") -> str:
+def verity_init(registry_path: str = ".verity/registry.json", repo_id: str = "repo:default") -> str:
     """Initialise a new verity.json proof-chain registry."""
     try:
         s = VeritySession(registry_path)
@@ -58,7 +58,7 @@ def verity_add_feature(
     id: str,
     title: str,
     status: str = "active",
-    registry_path: str = "verity.json",
+    registry_path: str = ".verity/registry.json",
 ) -> str:
     """Add a Feature to the proof chain. id must use the feat: prefix. status: active|deprecated|retired."""
     s = VeritySession(registry_path)
@@ -73,7 +73,7 @@ def verity_add_claim(
     feature_id: str,
     tier: str = "T1",
     status: str = "open",
-    registry_path: str = "verity.json",
+    registry_path: str = ".verity/registry.json",
 ) -> str:
     """Add a Claim to the proof chain. id must use the clm: prefix. Use status='open' initially."""
     s = VeritySession(registry_path)
@@ -88,7 +88,7 @@ def verity_add_test(
     kind: str = "unit",
     path: str = "",
     status: str = "pending",
-    registry_path: str = "verity.json",
+    registry_path: str = ".verity/registry.json",
 ) -> str:
     """Add a Test to the proof chain. id must use the tst: prefix. Use status='pending' initially. kind: unit|integration."""
     s = VeritySession(registry_path)
@@ -103,7 +103,7 @@ def verity_add_evidence(
     artifact_path: str,
     kind: str = "test_run",
     status: str = "collected",
-    registry_path: str = "verity.json",
+    registry_path: str = ".verity/registry.json",
 ) -> str:
     """Add Evidence to the proof chain. id must use the evd: prefix. Use status='collected' initially."""
     s = VeritySession(registry_path)
@@ -115,7 +115,7 @@ def verity_add_evidence(
 def verity_set_status(
     id: str,
     status: str,
-    registry_path: str = "verity.json",
+    registry_path: str = ".verity/registry.json",
 ) -> str:
     """
     Promote an entity's status after the chain is fully wired.
@@ -161,7 +161,7 @@ def verity_set_status(
 @mcp.tool()
 def verity_set_status_batch(
     updates: list[dict],
-    registry_path: str = "verity.json",
+    registry_path: str = ".verity/registry.json",
 ) -> str:
     """
     Promote multiple entities in one call — validate once, save once.
@@ -203,7 +203,7 @@ def verity_set_status_batch(
 
 
 @mcp.tool()
-def verity_validate(registry_path: str = "verity.json") -> str:
+def verity_validate(registry_path: str = ".verity/registry.json") -> str:
     """Validate the proof chain. Returns 'OK' or a list of validation errors."""
     try:
         s = VeritySession(registry_path)
@@ -216,7 +216,7 @@ def verity_validate(registry_path: str = "verity.json") -> str:
 
 
 @mcp.tool()
-def verity_release(version: str, registry_path: str = "verity.json") -> str:
+def verity_release(version: str, registry_path: str = ".verity/registry.json") -> str:
     """Create a fail-closed release snapshot. All verified claims must have passed evidence."""
     try:
         s = VeritySession(registry_path)
@@ -230,7 +230,7 @@ def verity_release(version: str, registry_path: str = "verity.json") -> str:
 
 
 @mcp.tool()
-def verity_push(registry_path: str = "verity.json") -> str:
+def verity_push(registry_path: str = ".verity/registry.json") -> str:
     """Push the registry to Walrus and return the blob_id. Requires WALRUS_PUBLISHER_URL env var."""
     try:
         s = _session(registry_path)
@@ -241,7 +241,7 @@ def verity_push(registry_path: str = "verity.json") -> str:
 
 
 @mcp.tool()
-def verity_pull(blob_id: str, registry_path: str = "verity.json", force: bool = False) -> str:
+def verity_pull(blob_id: str, registry_path: str = ".verity/registry.json", force: bool = False) -> str:
     """Pull a registry from Walrus by blob_id. Pass force=True to overwrite an existing file. Requires WALRUS_AGGREGATOR_URL env var."""
     try:
         s = _session(registry_path)
@@ -254,7 +254,7 @@ def verity_pull(blob_id: str, registry_path: str = "verity.json", force: bool = 
 
 
 @mcp.tool()
-def verity_log(registry_path: str = "verity.json") -> str:
+def verity_log(registry_path: str = ".verity/registry.json") -> str:
     """Return the full push history for the registry."""
     try:
         s = VeritySession(registry_path)
@@ -271,7 +271,7 @@ def verity_log(registry_path: str = "verity.json") -> str:
 
 
 @mcp.tool()
-def verity_status(registry_path: str = "verity.json") -> str:
+def verity_status(registry_path: str = ".verity/registry.json") -> str:
     """Return a summary of the current proof chain: entity counts, validation status, latest push."""
     try:
         s = VeritySession(registry_path)
@@ -315,7 +315,7 @@ def verity_diff(blob_a: str, blob_b: str) -> str:
 
 
 @mcp.tool()
-def verity_export(format: str = "sarif", registry_path: str = "verity.json") -> str:
+def verity_export(format: str = "sarif", registry_path: str = ".verity/registry.json") -> str:
     """Export the proof chain to a standard DevSecOps format. format: sarif, junit, or spdx."""
     from verity.export import export
 
@@ -329,7 +329,7 @@ def verity_export(format: str = "sarif", registry_path: str = "verity.json") -> 
 
 
 @mcp.tool()
-def verity_sign(key_path: str, registry_path: str = "verity.json") -> str:
+def verity_sign(key_path: str, registry_path: str = ".verity/registry.json") -> str:
     """Sign the latest push blob with an Ed25519 private key. key_path must point to a PEM private key generated by verity keygen."""
     try:
         from verity.signing import load_private_key, pubkey_to_b64, sign_blob
