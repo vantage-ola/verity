@@ -243,3 +243,65 @@ def test_add_evidence_bad_status(tmp_session: VeritySession) -> None:
     tmp_session.add_test("tst:x.unit", claim_id="clm:x.t1")
     with pytest.raises(ValueError, match="evidence status"):
         tmp_session.add_evidence("evd:x.ci", test_id="tst:x.unit", artifact_path="a.json", status="passd")
+
+
+# ---------------------------------------------------------------------------
+# upload_artifacts
+# ---------------------------------------------------------------------------
+
+def test_upload_artifacts_rewrites_paths(tmp_path: Path) -> None:
+    s = VeritySession(tmp_path / "verity.json")
+    s.init(repo_id="repo:test")
+    s.add_feature("feat:x", "X")
+    s.add_claim("clm:x.t1", "X", feature_id="feat:x")
+    s.add_test("tst:x.unit", claim_id="clm:x.t1")
+    artifact = tmp_path / "ci.json"
+    artifact.write_text('{"result": "passed"}')
+    s.add_evidence("evd:x.ci", test_id="tst:x.unit", artifact_path=str(artifact))
+
+    backend = MagicMock()
+    backend.store.return_value = "artifact-blob-id"
+    s._backend = backend
+
+    uploaded = s.upload_artifacts()
+
+    assert uploaded == {"evd:x.ci": "artifact-blob-id"}
+    reg = s.registry()
+    assert reg.evidence[0].artifact_path == "walrus://artifact-blob-id"
+    backend.store.assert_called_once_with(b'{"result": "passed"}')
+
+
+def test_upload_artifacts_skips_walrus_paths(tmp_path: Path) -> None:
+    s = VeritySession(tmp_path / "verity.json")
+    s.init(repo_id="repo:test")
+    s.add_feature("feat:x", "X")
+    s.add_claim("clm:x.t1", "X", feature_id="feat:x")
+    s.add_test("tst:x.unit", claim_id="clm:x.t1")
+    s.add_evidence("evd:x.ci", test_id="tst:x.unit", artifact_path="walrus://existing-blob")
+
+    backend = MagicMock()
+    s._backend = backend
+
+    uploaded = s.upload_artifacts()
+
+    assert uploaded == {}
+    backend.store.assert_not_called()
+    assert s.registry().evidence[0].artifact_path == "walrus://existing-blob"
+
+
+def test_upload_artifacts_skips_missing_files(tmp_path: Path) -> None:
+    s = VeritySession(tmp_path / "verity.json")
+    s.init(repo_id="repo:test")
+    s.add_feature("feat:x", "X")
+    s.add_claim("clm:x.t1", "X", feature_id="feat:x")
+    s.add_test("tst:x.unit", claim_id="clm:x.t1")
+    s.add_evidence("evd:x.ci", test_id="tst:x.unit", artifact_path="nonexistent.json")
+
+    backend = MagicMock()
+    s._backend = backend
+
+    uploaded = s.upload_artifacts()
+
+    assert uploaded == {}
+    backend.store.assert_not_called()
+    assert s.registry().evidence[0].artifact_path == "nonexistent.json"

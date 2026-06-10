@@ -1097,3 +1097,60 @@ def test_watch_auto_push_on_valid_change(tmp_path: Path, monkeypatch: pytest.Mon
         result = runner.invoke(app, ["watch", "--auto-push"])
     assert result.exit_code == 0
     assert f"pushed: {FAKE_BLOB}" in result.output
+
+
+# ---------------------------------------------------------------------------
+# push --upload-artifacts
+# ---------------------------------------------------------------------------
+
+def test_push_upload_artifacts(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner.invoke(app, ["init"])
+    # create a real artifact file
+    artifact = tmp_path / ".verity" / "ci.json"
+    artifact.write_text('{"result": "passed"}')
+    # wire a minimal chain pointing at the artifact
+    runner.invoke(app, ["add", "feature", "feat:x", "X"])
+    runner.invoke(app, ["add", "claim", "clm:x.t1", "T1 claim", "--feature", "feat:x"])
+    runner.invoke(app, ["add", "test", "tst:x.unit", "Unit test", "--claim", "clm:x.t1"])
+    runner.invoke(app, ["add", "evidence", "evd:x.ci", "CI run", "--test", "tst:x.unit",
+                        "--artifact", ".verity/ci.json", "--status", "passed"])
+
+    ARTIFACT_BLOB = "ArtifactBlobId0000000000000000000000000000"
+    REGISTRY_BLOB = "RegistryBlobId0000000000000000000000000000"
+    body_artifact = {"newlyCreated": {"blobObject": {"blobId": ARTIFACT_BLOB}}}
+    body_registry = {"newlyCreated": {"blobObject": {"blobId": REGISTRY_BLOB}}}
+
+    with patch("verity.walrus.httpx.Client") as MockClient:
+        MockClient.return_value.__enter__.return_value.put.side_effect = [
+            _mock_resp(200, body_artifact),
+            _mock_resp(200, body_registry),
+        ]
+        result = runner.invoke(app, ["push", "--upload-artifacts"])
+
+    assert result.exit_code == 0
+    assert "walrus://" in result.output
+    assert REGISTRY_BLOB in result.output
+
+
+def test_push_upload_artifacts_skips_missing_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    runner.invoke(app, ["init"])
+    runner.invoke(app, ["add", "feature", "feat:x", "X"])
+    runner.invoke(app, ["add", "claim", "clm:x.t1", "T1 claim", "--feature", "feat:x"])
+    runner.invoke(app, ["add", "test", "tst:x.unit", "Unit test", "--claim", "clm:x.t1"])
+    # artifact path points to a file that doesn't exist
+    runner.invoke(app, ["add", "evidence", "evd:x.ci", "CI run", "--test", "tst:x.unit",
+                        "--artifact", "nonexistent.json", "--status", "passed"])
+
+    body = {"newlyCreated": {"blobObject": {"blobId": FAKE_BLOB}}}
+    with patch("verity.walrus.httpx.Client") as MockClient:
+        MockClient.return_value.__enter__.return_value.put.return_value = _mock_resp(200, body)
+        result = runner.invoke(app, ["push", "--upload-artifacts"])
+
+    assert result.exit_code == 0
+    assert FAKE_BLOB in result.output
+    # artifact path should be unchanged since file didn't exist
+    from verity.registry import load_registry
+    reg = load_registry(tmp_path / ".verity" / "registry.json")
+    assert reg.evidence[0].artifact_path == "nonexistent.json"

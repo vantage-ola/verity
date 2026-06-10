@@ -242,9 +242,21 @@ def release(
 def push_cmd(
     epochs: Annotated[int, typer.Option("--epochs", help="Walrus storage epochs")] = 5,
     backend_name: BackendChoice = "walrus",
+    upload_artifacts: Annotated[bool, typer.Option("--upload-artifacts", help="Upload local artifact files to Walrus before pushing the registry.")] = False,
 ) -> None:
     """Upload registry to Walrus (or MemWal); print blob ID and record it locally."""
     path, registry = _load()
+    backend = _get_backend(backend_name, epochs=epochs)
+
+    if upload_artifacts:
+        from verity.session import VeritySession
+        session = VeritySession(path, backend=backend)
+        uploaded = session.upload_artifacts()
+        for evd_id, blob_id in uploaded.items():
+            typer.echo(f"  {evd_id:<22} → walrus://{blob_id[:16]}…")
+        if uploaded:
+            path, registry = _load()
+
     errors = validate(registry)
     if errors:
         for e in errors:
@@ -252,7 +264,6 @@ def push_cmd(
         typer.echo("Fix validation errors before pushing.", err=True)
         raise typer.Exit(1)
 
-    backend = _get_backend(backend_name, epochs=epochs)
     content = canonical_json(registry).encode("utf-8")
 
     try:

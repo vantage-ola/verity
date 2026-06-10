@@ -174,6 +174,31 @@ class VeritySession:
         self._save(registry)
         return blob_id
 
+    def upload_artifacts(self) -> dict[str, str]:
+        """Upload local artifact files to Walrus; rewrite artifact_path to walrus://<blob_id>.
+
+        Returns mapping of evidence_id → new blob_id for uploaded files.
+        Skips entries already at walrus:// or whose file doesn't exist.
+        Raises VerityPushError if no backend configured.
+        """
+        if self._backend is None:
+            raise VerityPushError("No storage backend configured.")
+        registry = self._load()
+        uploaded: dict[str, str] = {}
+        for evd in registry.evidence:
+            path_str = evd.artifact_path
+            if not path_str or path_str.startswith("walrus://"):
+                continue
+            artifact = Path(path_str)
+            if not artifact.exists():
+                continue
+            blob_id = self._backend.store(artifact.read_bytes())
+            evd.artifact_path = f"walrus://{blob_id}"
+            uploaded[evd.id] = blob_id
+        if uploaded:
+            self._save(registry)
+        return uploaded
+
     def pull(self, blob_id: str, *, force: bool = False) -> None:
         """
         Download a registry by blob ID and write it to the local file.
