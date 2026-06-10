@@ -129,17 +129,17 @@ function CliRef() {
     <div>
       <div className="v-overline-accent" style={{ marginBottom: 12 }}>Reference</div>
       <h1 className="v-h1" style={{ margin: '0 0 16px' }}>CLI Reference</h1>
-      <P>All commands read <InlineCode>verity.json</InlineCode> from the current directory unless <InlineCode>--dir</InlineCode> is passed.</P>
+      <P>All commands read <InlineCode>.verity/registry.json</InlineCode> from the current directory by default. If only a legacy <InlineCode>verity.json</InlineCode> exists at the repo root, it is used with a deprecation warning. Pass <InlineCode>--dir</InlineCode> to target a different directory.</P>
 
       <H2>verity init</H2>
-      <P>Create <InlineCode>verity.json</InlineCode>. Fails if it already exists.</P>
+      <P>Create <InlineCode>.verity/registry.json</InlineCode>. Fails if it already exists.</P>
       <Code>
         verity init [DIRECTORY] [<span className="c-flag">--repo-id</span> TEXT]
       </Code>
       <Table
         headers={['Option', 'Default', 'Description']}
         rows={[
-          ['DIRECTORY', '.', 'Where to create verity.json'],
+          ['DIRECTORY', '.', 'Where to create .verity/registry.json'],
           ['--repo-id', 'repo:default', 'Registry identifier'],
         ]}
       />
@@ -197,7 +197,9 @@ function CliRef() {
           ['Broken links', 'claim→feature, test→claim, evidence→test, release→claim'],
           ['Duplicate IDs', 'within each entity type'],
           ['Verified claims', 'must have ≥1 linked test'],
-          ['Passing tests', 'must have ≥1 linked evidence'],
+          ['Passing tests', 'must have ≥1 linked passed evidence'],
+          ['T1 verified claims', 'must have ≥1 passed evidence'],
+          ['Release claim_ids', 'all referenced claims must be verified'],
         ]}
       />
 
@@ -231,8 +233,9 @@ function CliRef() {
       <H2>verity pull</H2>
       <P>Fetch a registry blob by ID and write it to <InlineCode>.verity/registry.json</InlineCode>. Safe by default — pass <InlineCode>--force</InlineCode> to overwrite an existing file.</P>
       <Code>
-        verity pull BLOB_ID [<span className="c-flag">--backend</span> walrus|memwal]{'\n\n'}
-        <span className="c-prompt">$ </span>verity pull AbCdEfGhIjKlMnOpQrStUvWxYz…
+        verity pull BLOB_ID [<span className="c-flag">--force</span>] [<span className="c-flag">--backend</span> walrus|memwal]{'\n\n'}
+        <span className="c-prompt">$ </span>verity pull AbCdEfGhIjKlMnOpQrStUvWxYz…{'\n'}
+        <span className="c-prompt">$ </span>verity pull AbCdEfGhIjKlMnOpQrStUvWxYz… <span className="c-flag">--force</span>  <span className="c-comm"># overwrite existing</span>
       </Code>
 
       <H2>verity watch</H2>
@@ -444,7 +447,8 @@ function CliRef() {
           ['verity_set_status_batch', 'Promote multiple entities atomically in one call'],
           ['verity_validate', 'Validate the full chain'],
           ['verity_release', 'Fail-closed release'],
-          ['verity_push / pull', 'Walrus push and pull'],
+          ['verity_push', 'Push to Walrus; upload_artifacts=True uploads local artifact files first'],
+          ['verity_pull', 'Pull from Walrus by blob ID; force=True to overwrite'],
           ['verity_log', 'Push history'],
           ['verity_status', 'Entity counts + validation summary'],
           ['verity_diff', 'Diff two Walrus blob snapshots'],
@@ -466,21 +470,21 @@ function PythonApi() {
       <P>The same operations as the CLI, exposed as Python methods for use in agent scripts and pipelines.</P>
 
       <H2>VeritySession</H2>
-      <P>The primary interface. All mutating methods write through to <InlineCode>verity.json</InlineCode> immediately.</P>
+      <P>The primary interface. All mutating methods write through to <InlineCode>.verity/registry.json</InlineCode> immediately (or whatever path you pass to the constructor).</P>
       <Code>
         <span className="c-flag">from</span> verity <span className="c-flag">import</span> VeritySession, WalrusBackend{'\n\n'}
-        <span className="c-comm"># backend is optional — required only if you call push() or pull()</span>{'\n'}
-        v = VeritySession(<span className="c-str">"verity.json"</span>, backend=WalrusBackend())
+        <span className="c-comm"># path defaults to .verity/registry.json; backend required for push/pull</span>{'\n'}
+        v = VeritySession(backend=WalrusBackend())
       </Code>
 
       <H3>Constructor</H3>
-      <Code>VeritySession(path=<span className="c-str">"verity.json"</span>, *, backend: StorageBackend | None = None)</Code>
+      <Code>VeritySession(path=None, *, backend: StorageBackend | None = None)</Code>
 
       <H3>Methods</H3>
       <Table
         headers={['Method', 'Returns', 'Description']}
         rows={[
-          ['init(repo_id?)', 'Registry', 'Create verity.json; raises FileExistsError if present'],
+          ['init(repo_id?)', 'Registry', 'Create .verity/registry.json; raises FileExistsError if present'],
           ['add_feature(id, title, status?)', 'Feature', 'Append a feature'],
           ['add_claim(id, title, *, feature_id, tier?, status?)', 'Claim', 'Append a claim'],
           ['add_test(id, *, claim_id, kind?, path?, status?)', 'Test', 'Append a test'],
@@ -488,7 +492,8 @@ function PythonApi() {
           ['validate()', 'list[str]', 'Return errors; empty list means clean'],
           ['release(version)', 'Release', 'Fail-closed snapshot; raises VerityReleaseError on guard failure'],
           ['push(*, epochs?)', 'str', 'Upload to backend; returns blob ID string'],
-          ['pull(blob_id)', 'None', 'Fetch from backend; overwrites local registry'],
+          ['upload_artifacts()', 'dict[str, str]', 'Upload local artifact files to Walrus; rewrite artifact_path to walrus://…; returns {evd_id: blob_id}'],
+          ['pull(blob_id, *, force=False)', 'None', 'Fetch blob from backend; raises FileExistsError if registry exists unless force=True'],
           ['log()', 'list[PushRecord]', 'All push records'],
           ['registry()', 'Registry', 'Current registry object'],
           ['set_context(key, value)', 'None', 'Upsert a context entry'],
@@ -500,7 +505,7 @@ function PythonApi() {
       <H3>Full example</H3>
       <Code>
         <span className="c-flag">from</span> verity <span className="c-flag">import</span> VeritySession, WalrusBackend{'\n\n'}
-        v = VeritySession(<span className="c-str">"verity.json"</span>, backend=WalrusBackend()){'\n'}
+        v = VeritySession(backend=WalrusBackend())  <span className="c-comm"># reads .verity/registry.json by default</span>{'\n'}
         v.init(repo_id=<span className="c-str">"repo:my-agent"</span>){'\n\n'}
         v.add_feature(<span className="c-str">"feat:auth"</span>, <span className="c-str">"User authentication"</span>){'\n'}
         v.add_claim(<span className="c-str">"clm:auth.t1"</span>, <span className="c-str">"Login succeeds"</span>,{'\n'}
@@ -525,7 +530,7 @@ function PythonApi() {
       <Code>
         <span className="c-flag">from</span> verity <span className="c-flag">import</span> load_registry, save_registry, validate, push, pull{'\n'}
         <span className="c-flag">from</span> pathlib <span className="c-flag">import</span> Path{'\n\n'}
-        registry = load_registry(Path(<span className="c-str">"verity.json"</span>)){'\n'}
+        registry = load_registry(Path(<span className="c-str">".verity/registry.json"</span>)){'\n'}
         errors = validate(registry){'\n\n'}
         <span className="c-comm"># push(registry, ...) → str blob ID</span>{'\n'}
         blob_id = push(registry, publisher_url=<span className="c-str">"https://…"</span>){'\n\n'}
@@ -543,7 +548,7 @@ function PythonApi() {
         {'        '}<span className="c-flag">return</span> key{'\n\n'}
         {'    '}<span className="c-flag">def</span> fetch(self, key: str) {'-> bytes:'}{'\n'}
         {'        '}<span className="c-flag">return</span> download_from_s3(key){'\n\n'}
-        v = VeritySession(<span className="c-str">"verity.json"</span>, backend=S3Backend())
+        v = VeritySession(backend=S3Backend())  <span className="c-comm"># default path: .verity/registry.json</span>
       </Code>
 
       <H2>Error types</H2>
@@ -589,10 +594,10 @@ function MemWalDoc() {
         <span className="c-comm"># Python</span>{'\n'}
         <span className="c-flag">from</span> verity <span className="c-flag">import</span> VeritySession, MemWalBackend{'\n\n'}
         backend = MemWalBackend()  <span className="c-comm"># reads env vars</span>{'\n'}
-        v = VeritySession(<span className="c-str">"verity.json"</span>, backend=backend){'\n'}
+        v = VeritySession(backend=backend)  <span className="c-comm"># reads .verity/registry.json</span>{'\n'}
         blob_id = v.push()  <span className="c-comm"># uploads to Walrus + registers in MemWal</span>{'\n\n'}
         <span className="c-comm"># restore in another session (still needs the blob_id)</span>{'\n'}
-        v2 = VeritySession(<span className="c-str">"restored.json"</span>, backend=backend){'\n'}
+        v2 = VeritySession(<span className="c-str">"agent_b/.verity/registry.json"</span>, backend=backend){'\n'}
         v2.pull(blob_id)
       </Code>
 

@@ -50,8 +50,8 @@ verity push                        # Walrus (default)
 verity push --backend memwal       # Walrus + MemWal semantic pointer
 verity push --upload-artifacts     # upload local artifact files first, rewrite paths to walrus://
 
-# Pull a blob (safe by default — won't overwrite existing verity.json)
-verity pull <blob_id>              # errors if verity.json already exists
+# Pull a blob (safe by default — won't overwrite existing .verity/registry.json)
+verity pull <blob_id>              # errors if .verity/registry.json already exists
 verity pull <blob_id> --force      # overwrite existing file
 
 # Watch for changes (daemon mode)
@@ -98,7 +98,7 @@ verity status
 ```python
 from verity import VeritySession, WalrusBackend, MemWalBackend
 
-v = VeritySession("verity.json", backend=WalrusBackend())
+v = VeritySession(backend=WalrusBackend())   # default path: .verity/registry.json
 v.init(repo_id="repo:my-project")
 
 v.add_feature("feat:auth", "User authentication")
@@ -119,7 +119,9 @@ for entry in v.log():
 
 ### Key API facts
 - `VeritySession` is **not** a context manager — no `with` block
+- Default path is `.verity/registry.json`; legacy `verity.json` at repo root is used with a `DeprecationWarning` if the new path doesn't exist
 - `push()` returns a **plain `str`** (the blob_id), not an object
+- `upload_artifacts()` uploads local artifact files to Walrus, rewrites `artifact_path` to `walrus://<blob_id>`, and returns `{evd_id: blob_id}`; call it before `push()` if you want artifacts on Walrus
 - `backend=` is passed to the constructor, not to `push()`
 - `add_claim` uses `feature_id=` (keyword), not `feature=`
 - `validate()` returns a list of error strings; empty list = valid
@@ -141,11 +143,40 @@ for entry in v.log():
 
 ---
 
+## MCP server
+
+Install: `pip install "walrus-verity[mcp]"` then run `verity-mcp`.
+
+| Tool | Description |
+|---|---|
+| `verity_init` | Create `.verity/registry.json` |
+| `verity_add_feature` | Add a feature entity |
+| `verity_add_claim` | Add a claim entity |
+| `verity_add_test` | Add a test entity |
+| `verity_add_evidence` | Add an evidence entity |
+| `verity_set_status` | Promote a single entity's status after chain is wired |
+| `verity_set_status_batch` | Promote multiple entities atomically in one call — pass `updates=[{"id": "...", "status": "..."}]` |
+| `verity_validate` | Validate the full chain |
+| `verity_release` | Fail-closed release snapshot |
+| `verity_push` | Push to Walrus; pass `upload_artifacts=True` to upload local artifact files first |
+| `verity_pull` | Fetch blob from Walrus; pass `force=True` to overwrite existing registry |
+| `verity_log` | Push history |
+| `verity_status` | Entity counts + validation summary |
+| `verity_diff` | Diff two Walrus blob snapshots |
+| `verity_export` | Export to SARIF, JUnit, or SPDX |
+| `verity_sign` | Sign the latest push with an Ed25519 key |
+| `verity_verify` | Fetch blob, validate chain, optionally check signature |
+| `verity_recall` | Natural language query against MemWal |
+
+All tools default to `registry_path=".verity/registry.json"`. Domain errors return strings; unexpected errors raise (proper MCP error).
+
+---
+
 ## Multi-agent handoff
 
 ```python
 # Agent A — builds and publishes
-a = VeritySession("agent_a/verity.json", backend=WalrusBackend())
+a = VeritySession("agent_a/.verity/registry.json", backend=WalrusBackend())
 a.init(repo_id="repo:quality-check")
 # ... add features, claims, tests, evidence ...
 a.validate()
@@ -153,7 +184,7 @@ a.release("0.1.0")
 blob_id = a.push()   # pass this to Agent B
 
 # Agent B — pulls, verifies, extends
-b = VeritySession("agent_b/verity.json", backend=WalrusBackend())
+b = VeritySession("agent_b/.verity/registry.json", backend=WalrusBackend())
 b.pull(blob_id)
 b.validate()
 b.add_evidence("evd:audit", test_id="tst:...", artifact_path="audit/sign-off.json", status="passed")
@@ -172,8 +203,8 @@ class _SharedStore:
     def fetch(self, key): return self._blobs[key]
 
 shared = _SharedStore()
-a = VeritySession("agent_a/verity.json", backend=shared)
-b = VeritySession("agent_b/verity.json", backend=shared)
+a = VeritySession("agent_a/.verity/registry.json", backend=shared)
+b = VeritySession("agent_b/.verity/registry.json", backend=shared)
 ```
 
 ---
@@ -193,11 +224,11 @@ Auto-loaded from `.env` via `python-dotenv` when present.
 
 ## Operating rules
 
-- **Update `verity.json` after every feature, fix, or code change.** If you added a feature, add `feat:` + `clm:` + `tst:` + `evd:`. If you fixed a bug, add or update the relevant evidence. If you wrote tests, link them. The proof chain must reflect what actually exists in the repo.
+- **Update `.verity/registry.json` after every feature, fix, or code change.** If you added a feature, add `feat:` + `clm:` + `tst:` + `evd:`. If you fixed a bug, add or update the relevant evidence. If you wrote tests, link them. The proof chain must reflect what actually exists in the repo.
 - Always validate before release: `v.validate()` or `verity validate`
 - `blob_id` is immutable — it always resolves to the exact state that was pushed
 - Agent B's push creates a **new** blob; it does not overwrite Agent A's
-- The chain file (`verity.json`) is local state; the blob on Walrus is the portable artifact
+- The chain file (`.verity/registry.json`) is local state; the blob on Walrus is the portable artifact
 - Tests live at `tests/` — run with `uv run pytest`
 
 ## Correct order when building the chain via CLI
@@ -211,8 +242,8 @@ verity add claim   clm:x.t1 "My claim"  --feature feat:x        # open (default)
 verity add test    tst:x.unit "My test" --claim clm:x.t1         # pending (default)
 verity add evidence evd:x.ci "CI run"   --test tst:x.unit        # collected (default)
 
-# then promote
-# patch verity.json or re-add with --status, then verity validate
+# then promote — re-add with --status and verity validate
+verity add claim clm:x.t1 "My claim" --feature feat:x --status verified
 ```
 
 **Never set a promoted status before the chain is wired:**

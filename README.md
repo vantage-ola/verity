@@ -55,7 +55,8 @@ verity init --repo-id repo:my-project
 verity track feat:auth tests/test_auth.py --title "Login succeeds"
 verity validate
 verity release 1.0.0
-verity push          # → blob: AbCdEfGh…
+verity push                    # → blob: AbCdEfGh…
+verity push --upload-artifacts # upload artifact files to Walrus first, then push registry
 ```
 
 Or build the chain manually for full control:
@@ -138,13 +139,14 @@ Add to your `claude_mcp_config.json` (or equivalent):
 
 | MCP tool | Description |
 |---|---|
-| `verity_init` | Create `verity.json` |
+| `verity_init` | Create `.verity/registry.json` |
 | `verity_add_feature / claim / test / evidence` | Add chain entities |
 | `verity_set_status` | Promote status after chain is wired |
 | `verity_set_status_batch` | Promote multiple entities atomically in one call |
 | `verity_validate` | Validate the full chain |
 | `verity_release` | Fail-closed release |
-| `verity_push / pull` | Walrus push and pull |
+| `verity_push` | Push to Walrus; `upload_artifacts=True` uploads local artifact files first |
+| `verity_pull` | Fetch blob from Walrus; `force=True` to overwrite existing registry |
 | `verity_log` | Push history |
 | `verity_status` | Entity counts + validation summary |
 | `verity_diff` | Diff two Walrus blob snapshots |
@@ -179,17 +181,22 @@ verity recall "what was the latest release"
 
 ---
 
+## Watch mode
+
+`verity watch` polls the registry file and validates (and optionally auto-pushes) on every change:
+
+```bash
+verity watch                       # poll every 5s, validate on change
+verity watch --interval 30         # custom poll interval (seconds)
+verity watch --auto-push           # push to Walrus on each valid change
+verity watch --auto-push --backend memwal
+```
+
+---
+
 ## Documentation
 
-| Topic | |
-|---|---|
-| [CLI Reference](docs/cli.md) | All commands with flags and examples |
-| [MCP Server](plugins/verity-agent/README.md) | `verity-mcp`: expose verity tools to any MCP-compatible editor |
-| [Python API](docs/python-api.md) | `VeritySession`, low-level functions, custom backends |
-| [Schema Reference](docs/schema.md) | `verity.json` fields, ID prefixes, status values, validation rules |
-| [Walrus Setup](docs/walrus.md) | Testnet, mainnet, custom endpoints |
-| [MemWal Setup](docs/memwal.md) | Env vars, delegate keys, namespace isolation |
-| [Multi-Agent Patterns](docs/multi-agent.md) | Handoff pattern, audit trail, dry-run |
+Full documentation is available at the [verity web app](https://vantage-ola.github.io/verity/) — CLI reference, MCP server, Python API, schema, Walrus/MemWal setup, and multi-agent patterns.
 
 ---
 

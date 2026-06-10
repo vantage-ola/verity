@@ -230,12 +230,21 @@ def verity_release(version: str, registry_path: str = ".verity/registry.json") -
 
 
 @mcp.tool()
-def verity_push(registry_path: str = ".verity/registry.json") -> str:
-    """Push the registry to Walrus and return the blob_id. Requires WALRUS_PUBLISHER_URL env var."""
+def verity_push(registry_path: str = ".verity/registry.json", upload_artifacts: bool = False) -> str:
+    """Push the registry to Walrus and return the blob_id. Pass upload_artifacts=True to upload local artifact files first and rewrite their paths to walrus://<blob_id>. Requires WALRUS_PUBLISHER_URL env var."""
     try:
         s = _session(registry_path)
+        if upload_artifacts:
+            uploaded = s.upload_artifacts()
+            if uploaded:
+                lines = [f"  {eid} → walrus://{bid}" for eid, bid in uploaded.items()]
+                prefix = "Uploaded artifacts:\n" + "\n".join(lines) + "\n"
+            else:
+                prefix = ""
+        else:
+            prefix = ""
         blob_id = s.push()
-        return f"Pushed. blob_id: {blob_id}"
+        return f"{prefix}Pushed. blob_id: {blob_id}"
     except (VerityPushError, FileNotFoundError) as e:
         return f"Error: {e}"
 
