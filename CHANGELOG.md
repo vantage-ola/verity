@@ -11,6 +11,13 @@ This project uses [semantic versioning](https://semver.org/).
 
 ---
 
+## [0.3.8] — 2026-06-10
+
+### Fixed
+- **Status literal validation** — `VeritySession.add_feature/add_claim/add_test/add_evidence` now validate the `status` argument before touching the registry; invalid values raise `ValueError` with a clear message listing the allowed values; catches typos like `"verifed"` or `"passsed"` at the call site instead of deep in Pydantic
+
+---
+
 ## [0.3.7] — 2026-06-10
 
 ### Fixed

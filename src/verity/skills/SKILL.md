@@ -4,7 +4,7 @@ Use this skill when working with the `verity` proof-chain registry — building 
 
 **Package**: `walrus-verity` on PyPI  
 **Repo**: `~/work/verity/`  
-**Version**: 0.3.7
+**Version**: 0.3.8
 
 ---
 
@@ -48,6 +48,10 @@ verity validate
 verity release 1.0.0
 verity push                        # Walrus (default)
 verity push --backend memwal       # Walrus + MemWal semantic pointer
+
+# Pull a blob (safe by default — won't overwrite existing verity.json)
+verity pull <blob_id>              # errors if verity.json already exists
+verity pull <blob_id> --force      # overwrite existing file
 
 # Recall from MemWal (natural language query)
 verity recall "what features have we built"
@@ -113,6 +117,8 @@ for entry in v.log():
 - `add_claim` uses `feature_id=` (keyword), not `feature=`
 - `validate()` returns a list of error strings; empty list = valid
 - `registry()` returns a `Registry` object with `.features`, `.claims`, `.tests`, `.evidence`, `.releases`
+- `pull(blob_id)` raises `FileExistsError` if the file already exists — pass `force=True` to overwrite
+- `add_feature/add_claim/add_test/add_evidence` raise `ValueError` immediately for invalid `status` strings (allowed: `active|deprecated|retired`, `open|verified|rejected`, `pending|passing|failing`, `collected|passed|failed`)
 
 ---
 
