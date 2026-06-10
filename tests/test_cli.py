@@ -273,6 +273,27 @@ def test_pull_creates_parent_directory(tmp_path: Path) -> None:
     assert (target / "verity.json").exists()
 
 
+def test_pull_fails_if_file_exists_without_force(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "verity.json").write_text("{}")
+    result = runner.invoke(app, ["pull", FAKE_BLOB])
+    assert result.exit_code == 1
+    assert "already exists" in result.output
+
+
+def test_pull_force_overwrites_existing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "verity.json").write_text("{}")
+    remote_registry = Registry(repo_id="repo:overwritten")
+    content = canonical_json(remote_registry).encode()
+    with patch("verity.walrus.httpx.Client") as MockClient:
+        MockClient.return_value.__enter__.return_value.get.return_value = _mock_get_resp(200, content)
+        result = runner.invoke(app, ["pull", FAKE_BLOB, "--force"])
+    assert result.exit_code == 0
+    data = json.loads((tmp_path / "verity.json").read_text())
+    assert data["repo_id"] == "repo:overwritten"
+
+
 # ---------------------------------------------------------------------------
 # context
 # ---------------------------------------------------------------------------

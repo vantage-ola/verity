@@ -127,8 +127,38 @@ def test_pull_with_mock_backend(tmp_session: VeritySession) -> None:
     backend = MagicMock()
     backend.fetch.return_value = canonical_json(target).encode()
     s = VeritySession(tmp_session.path, backend=backend)
-    s.pull("some-blob-id")
+    s.pull("some-blob-id", force=True)
     assert s.registry().repo_id == "repo:remote"
+
+
+def test_pull_raises_if_file_exists(tmp_session: VeritySession) -> None:
+    backend = MagicMock()
+    s = VeritySession(tmp_session.path, backend=backend)
+    with pytest.raises(FileExistsError, match="force=True"):
+        s.pull("some-blob-id")
+
+
+def test_pull_force_overwrites(tmp_session: VeritySession) -> None:
+    from verity.registry import canonical_json
+
+    target = Registry(repo_id="repo:overwritten", features=[])
+    backend = MagicMock()
+    backend.fetch.return_value = canonical_json(target).encode()
+    s = VeritySession(tmp_session.path, backend=backend)
+    s.pull("some-blob-id", force=True)
+    assert s.registry().repo_id == "repo:overwritten"
+
+
+def test_pull_no_error_when_file_missing(tmp_path: VeritySession) -> None:
+    from verity.registry import canonical_json
+
+    target = Registry(repo_id="repo:fresh", features=[])
+    backend = MagicMock()
+    backend.fetch.return_value = canonical_json(target).encode()
+    path = tmp_path / "new.json"
+    s = VeritySession(str(path), backend=backend)
+    s.pull("some-blob-id")  # no force needed — file doesn't exist
+    assert path.exists()
 
 
 def test_log_empty(tmp_session: VeritySession) -> None:

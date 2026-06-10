@@ -159,16 +159,22 @@ class VeritySession:
         self._save(registry)
         return blob_id
 
-    def pull(self, blob_id: str) -> None:
+    def pull(self, blob_id: str, *, force: bool = False) -> None:
         """
-        Download a registry by blob ID and overwrite the local verity.json.
+        Download a registry by blob ID and write it to the local file.
 
+        Raises FileExistsError if the file already exists and force=False.
         Raises VerityPushError if no backend is configured.
         """
         if self._backend is None:
             raise VerityPushError(
                 "No storage backend configured. Pass backend= to VeritySession, "
                 "or use the CLI (verity pull <blob-id>) which defaults to Walrus."
+            )
+        if not force and self.path.exists():
+            raise FileExistsError(
+                f"{self.path} already exists — pass force=True to overwrite, "
+                "or use `verity pull --force` from the CLI"
             )
         content = self._backend.fetch(blob_id)
         registry = Registry.model_validate(json.loads(content))

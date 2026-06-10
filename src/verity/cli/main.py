@@ -269,9 +269,15 @@ def pull_cmd(
     blob_id: Annotated[str, typer.Argument(help="Walrus blob ID")],
     directory: Annotated[Path, typer.Option("--dir", help="Target directory")] = Path("."),
     backend_name: BackendChoice = "walrus",
+    force: Annotated[bool, typer.Option("--force", help="Overwrite existing verity.json")] = False,
 ) -> None:
     """Fetch a registry from Walrus (or MemWal) and write it to verity.json."""
     backend = _get_backend(backend_name)
+
+    path = registry_path(directory)
+    if not force and path.exists():
+        typer.echo(f"Error: {path} already exists. Use --force to overwrite.", err=True)
+        raise typer.Exit(1)
 
     try:
         content = backend.fetch(blob_id)
@@ -282,7 +288,6 @@ def pull_cmd(
     import json
 
     registry = Registry.model_validate(json.loads(content))
-    path = registry_path(directory)
     path.parent.mkdir(parents=True, exist_ok=True)
     save_registry(registry, path)
     typer.echo(f"Restored registry from {blob_id}")

@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 
 from verity.mcp_server import (
     verity_add_claim,
@@ -85,8 +87,8 @@ def test_add_feature(tmp_path):
 def test_add_feature_bad_prefix(tmp_path):
     rp = _reg_path(tmp_path)
     verity_init(registry_path=rp)
-    result = verity_add_feature("bad:auth", "Auth", registry_path=rp)
-    assert "Error" in result
+    with pytest.raises(Exception):
+        verity_add_feature("bad:auth", "Auth", registry_path=rp)
 
 
 def test_add_claim(tmp_path):
@@ -101,8 +103,8 @@ def test_add_claim_bad_prefix(tmp_path):
     rp = _reg_path(tmp_path)
     verity_init(registry_path=rp)
     verity_add_feature("feat:auth", "Auth", registry_path=rp)
-    result = verity_add_claim("bad:auth.t1", "Login works", feature_id="feat:auth", registry_path=rp)
-    assert "Error" in result
+    with pytest.raises(Exception):
+        verity_add_claim("bad:auth.t1", "Login works", feature_id="feat:auth", registry_path=rp)
 
 
 def test_add_test(tmp_path):
@@ -117,8 +119,8 @@ def test_add_test(tmp_path):
 def test_add_test_bad_prefix(tmp_path):
     rp = _reg_path(tmp_path)
     verity_init(registry_path=rp)
-    result = verity_add_test("bad:unit", claim_id="clm:auth.t1", registry_path=rp)
-    assert "Error" in result
+    with pytest.raises(Exception):
+        verity_add_test("bad:unit", claim_id="clm:auth.t1", registry_path=rp)
 
 
 def test_add_evidence(tmp_path):
@@ -134,8 +136,8 @@ def test_add_evidence(tmp_path):
 def test_add_evidence_bad_prefix(tmp_path):
     rp = _reg_path(tmp_path)
     verity_init(registry_path=rp)
-    result = verity_add_evidence("bad:ci", test_id="tst:auth.unit", artifact_path="a.json", registry_path=rp)
-    assert "Error" in result
+    with pytest.raises(Exception):
+        verity_add_evidence("bad:ci", test_id="tst:auth.unit", artifact_path="a.json", registry_path=rp)
 
 
 # ---------------------------------------------------------------------------
@@ -377,8 +379,8 @@ def test_verity_diff_fetch_error(monkeypatch):
     mock_backend.fetch.side_effect = RuntimeError("network down")
     monkeypatch.setattr("verity.mcp_server.WalrusBackend", lambda **kw: mock_backend)
 
-    result = verity_diff(blob_a="blobA", blob_b="blobB")
-    assert result.startswith("Error:")
+    with pytest.raises(RuntimeError, match="network down"):
+        verity_diff(blob_a="blobA", blob_b="blobB")
 
 
 # ---------------------------------------------------------------------------
@@ -430,14 +432,13 @@ def test_verity_recall_happy_path(monkeypatch):
     assert "3 features built." in result
 
 
-def test_verity_recall_exception_returns_error(monkeypatch):
+def test_verity_recall_exception_raises(monkeypatch):
     monkeypatch.setattr(
         "verity.mcp_server.MemWalBackend",
         lambda **kw: (_ for _ in ()).throw(Exception("config missing")),
     )
-    result = verity_recall(query="q")
-    assert result.startswith("Error:")
-    assert "config missing" in result
+    with pytest.raises(Exception, match="config missing"):
+        verity_recall(query="q")
 
 
 def test_verity_recall_custom_namespace(monkeypatch):
@@ -488,7 +489,7 @@ def test_pull_with_mock_backend(tmp_path, monkeypatch):
     import verity
 
     monkeypatch.setattr(srv, "_session", lambda path: verity.VeritySession(path, backend=_MockBackend()))
-    result = verity_pull("blob-pull-test", registry_path=rp)
+    result = verity_pull("blob-pull-test", registry_path=rp, force=True)
     assert "blob-pull-test" in result
 
 
