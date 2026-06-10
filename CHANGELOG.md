@@ -11,6 +11,13 @@ This project uses [semantic versioning](https://semver.org/).
 
 ---
 
+## [0.3.10] — 2026-06-10
+
+### Added
+- **`verity watch`** — daemon mode that polls the registry for changes, validates on each update, and optionally auto-pushes to Walrus; `--interval` sets the poll cadence (default 5s), `--auto-push` enables push on each valid change, `--backend` selects walrus or memwal; fails closed (never pushes when validation errors exist)
+
+---
+
 ## [0.3.9] — 2026-06-10
 
 ### Changed
