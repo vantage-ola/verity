@@ -11,6 +11,20 @@ This project uses [semantic versioning](https://semver.org/).
 
 ---
 
+## [0.3.7] — 2026-06-10
+
+### Fixed
+- **MCP structured errors** — all MCP tools now raise exceptions (let FastMCP convert to proper MCP error responses) instead of returning `"Error: ..."` strings for unexpected failures; domain-specific expected outcomes (`FileExistsError`, `FileNotFoundError`, `VerityReleaseError`, `VerityPushError`, validation rejections, entity-not-found) still return human-readable strings; removes all catch-all `except Exception: return f"Error: {e}"` blocks
+
+---
+
+## [0.3.6] — 2026-06-10
+
+### Fixed
+- **Safe pull** — `VeritySession.pull()` now requires `force=True` to overwrite an existing `verity.json`; raises `FileExistsError` with a clear message if the file already exists and `force=False` (the default); CLI gains `--force` flag with the same guard; `verity_pull` MCP tool updated with `force: bool = False` parameter and returns a clear error on conflict
+
+---
+
 ## [0.3.5] — 2026-06-10
 
 ### Changed

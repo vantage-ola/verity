@@ -51,8 +51,6 @@ def verity_init(registry_path: str = "verity.json", repo_id: str = "repo:default
         return f"Initialised registry at {registry_path} with repo_id={repo_id}"
     except FileExistsError as e:
         return f"Error: {e}"
-    except Exception as e:  # pragma: no cover
-        return f"Error: {e}"
 
 
 @mcp.tool()
@@ -63,12 +61,9 @@ def verity_add_feature(
     registry_path: str = "verity.json",
 ) -> str:
     """Add a Feature to the proof chain. id must use the feat: prefix. status: active|deprecated|retired."""
-    try:
-        s = VeritySession(registry_path)
-        f = s.add_feature(id, title, status=status)
-        return f"Added feature {f.id!r}: {f.title}"
-    except Exception as e:
-        return f"Error: {e}"
+    s = VeritySession(registry_path)
+    f = s.add_feature(id, title, status=status)
+    return f"Added feature {f.id!r}: {f.title}"
 
 
 @mcp.tool()
@@ -81,12 +76,9 @@ def verity_add_claim(
     registry_path: str = "verity.json",
 ) -> str:
     """Add a Claim to the proof chain. id must use the clm: prefix. Use status='open' initially."""
-    try:
-        s = VeritySession(registry_path)
-        c = s.add_claim(id, title, feature_id=feature_id, tier=tier, status=status)
-        return f"Added claim {c.id!r}: {c.title} (tier={c.tier}, status={c.status})"
-    except Exception as e:
-        return f"Error: {e}"
+    s = VeritySession(registry_path)
+    c = s.add_claim(id, title, feature_id=feature_id, tier=tier, status=status)
+    return f"Added claim {c.id!r}: {c.title} (tier={c.tier}, status={c.status})"
 
 
 @mcp.tool()
@@ -99,12 +91,9 @@ def verity_add_test(
     registry_path: str = "verity.json",
 ) -> str:
     """Add a Test to the proof chain. id must use the tst: prefix. Use status='pending' initially. kind: unit|integration."""
-    try:
-        s = VeritySession(registry_path)
-        t = s.add_test(id, claim_id=claim_id, kind=kind, path=path, status=status)
-        return f"Added test {t.id!r} (kind={t.kind}, path={t.path!r}, status={t.status})"
-    except Exception as e:
-        return f"Error: {e}"
+    s = VeritySession(registry_path)
+    t = s.add_test(id, claim_id=claim_id, kind=kind, path=path, status=status)
+    return f"Added test {t.id!r} (kind={t.kind}, path={t.path!r}, status={t.status})"
 
 
 @mcp.tool()
@@ -117,12 +106,9 @@ def verity_add_evidence(
     registry_path: str = "verity.json",
 ) -> str:
     """Add Evidence to the proof chain. id must use the evd: prefix. Use status='collected' initially."""
-    try:
-        s = VeritySession(registry_path)
-        e = s.add_evidence(id, test_id=test_id, artifact_path=artifact_path, kind=kind, status=status)
-        return f"Added evidence {e.id!r}: {e.artifact_path} (status={e.status})"
-    except Exception as e:
-        return f"Error: {e}"
+    s = VeritySession(registry_path)
+    e = s.add_evidence(id, test_id=test_id, artifact_path=artifact_path, kind=kind, status=status)
+    return f"Added evidence {e.id!r}: {e.artifact_path} (status={e.status})"
 
 
 @mcp.tool()
@@ -139,40 +125,37 @@ def verity_set_status(
     Test:     pending | passing | failing  ← promote to 'passing' once evidence exists
     Evidence: collected | passed | failed  ← promote to 'passed' once artifact is confirmed
     """
-    try:
-        reg = load_registry(Path(registry_path))
-        entity: object | None = None
-        for family, attr in [
-            (reg.features, "status"),
-            (reg.claims, "status"),
-            (reg.tests, "status"),
-            (reg.evidence, "status"),
-        ]:
-            for item in family:
-                if item.id == id:
-                    entity = item
-                    break
-            if entity is not None:
+    reg = load_registry(Path(registry_path))
+    entity: object | None = None
+    for family, attr in [
+        (reg.features, "status"),
+        (reg.claims, "status"),
+        (reg.tests, "status"),
+        (reg.evidence, "status"),
+    ]:
+        for item in family:
+            if item.id == id:
+                entity = item
                 break
+        if entity is not None:
+            break
 
-        if entity is None:
-            return f"Error: no entity with id={id!r} found in {registry_path}"
+    if entity is None:
+        return f"Error: no entity with id={id!r} found in {registry_path}"
 
-        old = entity.status  # type: ignore[attr-defined]
-        entity.status = status  # type: ignore[attr-defined]
+    old = entity.status  # type: ignore[attr-defined]
+    entity.status = status  # type: ignore[attr-defined]
 
-        # Validate before saving to catch bad transitions (e.g. verified with no linked test)
-        from verity.validate import validate
+    # Validate before saving to catch bad transitions (e.g. verified with no linked test)
+    from verity.validate import validate
 
-        errors = validate(reg)
-        if errors:
-            entity.status = old  # type: ignore[attr-defined]
-            return "Status update rejected — validation errors:\n" + "\n".join(f"  - {e}" for e in errors)
+    errors = validate(reg)
+    if errors:
+        entity.status = old  # type: ignore[attr-defined]
+        return "Status update rejected — validation errors:\n" + "\n".join(f"  - {e}" for e in errors)
 
-        save_registry(reg, Path(registry_path))
-        return f"Updated {id!r}: {old} → {status}"
-    except Exception as e:  # pragma: no cover
-        return f"Error: {e}"
+    save_registry(reg, Path(registry_path))
+    return f"Updated {id!r}: {old} → {status}"
 
 
 @mcp.tool()
@@ -190,36 +173,33 @@ def verity_set_status_batch(
          {"id": "tst:auth.unit", "status": "passing"},
          {"id": "clm:auth.t1", "status": "verified"}]
     """
-    try:
-        reg = load_registry(Path(registry_path))
-        all_entities = [*reg.features, *reg.claims, *reg.tests, *reg.evidence]
-        index = {e.id: e for e in all_entities}
+    reg = load_registry(Path(registry_path))
+    all_entities = [*reg.features, *reg.claims, *reg.tests, *reg.evidence]
+    index = {e.id: e for e in all_entities}
 
-        applied: list[str] = []
-        originals: dict[str, str] = {}
+    applied: list[str] = []
+    originals: dict[str, str] = {}
 
-        for item in updates:
-            eid = item.get("id", "")
-            new_status = item.get("status", "")
-            if not eid or not new_status:
-                return f"Error: each update must have 'id' and 'status' keys, got {item!r}"
-            entity = index.get(eid)
-            if entity is None:
-                return f"Error: no entity with id={eid!r} found in {registry_path}"
-            originals[eid] = entity.status  # type: ignore[attr-defined]
-            entity.status = new_status  # type: ignore[attr-defined]
-            applied.append(f"{eid!r}: {originals[eid]} → {new_status}")
+    for item in updates:
+        eid = item.get("id", "")
+        new_status = item.get("status", "")
+        if not eid or not new_status:
+            return f"Error: each update must have 'id' and 'status' keys, got {item!r}"
+        entity = index.get(eid)
+        if entity is None:
+            return f"Error: no entity with id={eid!r} found in {registry_path}"
+        originals[eid] = entity.status  # type: ignore[attr-defined]
+        entity.status = new_status  # type: ignore[attr-defined]
+        applied.append(f"{eid!r}: {originals[eid]} → {new_status}")
 
-        errors = validate(reg)
-        if errors:
-            for eid, old in originals.items():
-                index[eid].status = old  # type: ignore[attr-defined]
-            return "Status updates rejected — validation errors:\n" + "\n".join(f"  - {e}" for e in errors)
+    errors = validate(reg)
+    if errors:
+        for eid, old in originals.items():
+            index[eid].status = old  # type: ignore[attr-defined]
+        return "Status updates rejected — validation errors:\n" + "\n".join(f"  - {e}" for e in errors)
 
-        save_registry(reg, Path(registry_path))
-        return "Updated:\n" + "\n".join(f"  {line}" for line in applied)
-    except Exception as e:  # pragma: no cover
-        return f"Error: {e}"
+    save_registry(reg, Path(registry_path))
+    return "Updated:\n" + "\n".join(f"  {line}" for line in applied)
 
 
 @mcp.tool()
@@ -258,20 +238,18 @@ def verity_push(registry_path: str = "verity.json") -> str:
         return f"Pushed. blob_id: {blob_id}"
     except (VerityPushError, FileNotFoundError) as e:
         return f"Error: {e}"
-    except Exception as e:  # pragma: no cover
-        return f"Error: {e}"
 
 
 @mcp.tool()
-def verity_pull(blob_id: str, registry_path: str = "verity.json") -> str:
-    """Pull a registry from Walrus by blob_id. Requires WALRUS_AGGREGATOR_URL env var."""
+def verity_pull(blob_id: str, registry_path: str = "verity.json", force: bool = False) -> str:
+    """Pull a registry from Walrus by blob_id. Pass force=True to overwrite an existing file. Requires WALRUS_AGGREGATOR_URL env var."""
     try:
         s = _session(registry_path)
-        s.pull(blob_id)
+        s.pull(blob_id, force=force)
         return f"Pulled {blob_id!r} → {registry_path}"
-    except (VerityPushError, FileNotFoundError) as e:
+    except FileExistsError as e:
         return f"Error: {e}"
-    except Exception as e:  # pragma: no cover
+    except (VerityPushError, FileNotFoundError) as e:
         return f"Error: {e}"
 
 
@@ -325,18 +303,15 @@ def verity_diff(blob_a: str, blob_b: str) -> str:
     from verity.diff import diff_registries, format_diff
     from verity.models import Registry
 
-    try:
-        backend = WalrusBackend(
-            publisher_url=os.getenv("WALRUS_PUBLISHER_URL", ""),
-            aggregator_url=os.getenv("WALRUS_AGGREGATOR_URL", ""),
-        )
-        content_a = backend.fetch(blob_a)
-        content_b = backend.fetch(blob_b)
-        reg_a = Registry.model_validate(json.loads(content_a))
-        reg_b = Registry.model_validate(json.loads(content_b))
-        return format_diff(diff_registries(reg_a, reg_b, blob_a=blob_a, blob_b=blob_b))
-    except Exception as e:
-        return f"Error: {e}"
+    backend = WalrusBackend(
+        publisher_url=os.getenv("WALRUS_PUBLISHER_URL", ""),
+        aggregator_url=os.getenv("WALRUS_AGGREGATOR_URL", ""),
+    )
+    content_a = backend.fetch(blob_a)
+    content_b = backend.fetch(blob_b)
+    reg_a = Registry.model_validate(json.loads(content_a))
+    reg_b = Registry.model_validate(json.loads(content_b))
+    return format_diff(diff_registries(reg_a, reg_b, blob_a=blob_a, blob_b=blob_b))
 
 
 @mcp.tool()
@@ -439,8 +414,6 @@ def verity_recall(query: str, namespace: str = "verity") -> str:
         return backend.recall(query, namespace=namespace)
     except ImportError:  # pragma: no cover
         return "Error: memwal package not installed — run: pip install 'walrus-verity[memwal]'"
-    except Exception as e:  # MemWalError or config errors
-        return f"Error: {e}"
 
 
 def main() -> None:  # pragma: no cover
