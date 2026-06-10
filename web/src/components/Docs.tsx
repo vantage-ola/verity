@@ -79,7 +79,7 @@ function QuickStart() {
       <H2>Initialise</H2>
       <Code>
         <span className="c-prompt">$ </span><span className="c-cmd">verity init</span>{'\n'}
-        <span className="c-out">Initialized verity.json</span>{'\n\n'}
+        <span className="c-out">Initialized .verity/registry.json</span>{'\n\n'}
         <span className="c-comm"># or in a specific directory</span>{'\n'}
         <span className="c-prompt">$ </span><span className="c-cmd">verity init</span> /path/to/project <span className="c-flag">--repo-id</span> repo:my-agent
       </Code>
