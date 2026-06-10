@@ -306,7 +306,6 @@ def test_store_registers_latest_release() -> None:
 
 
 def test_store_no_release_skips_release_memory() -> None:
-    from verity.models import Registry
     from verity.registry import canonical_json
     reg = _rich_registry()
     reg = reg.model_copy(update={"releases": []})

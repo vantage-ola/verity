@@ -443,7 +443,7 @@ def diff_cmd(
     """Show what changed between two Walrus blob snapshots of a proof chain."""
     import json as _json
 
-    from verity.diff import diff_registries
+    from verity.diff import diff_registries, format_diff
 
     b = _get_backend(backend)
     try:
@@ -454,7 +454,7 @@ def diff_cmd(
         raise typer.Exit(1)
     reg_a = Registry.model_validate(_json.loads(content_a))
     reg_b = Registry.model_validate(_json.loads(content_b))
-    typer.echo(diff_registries(reg_a, reg_b, blob_a=blob_a, blob_b=blob_b))
+    typer.echo(format_diff(diff_registries(reg_a, reg_b, blob_a=blob_a, blob_b=blob_b)))
 
 
 @app.command("export")

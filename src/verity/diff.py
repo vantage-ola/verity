@@ -2,7 +2,39 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
+
 from verity.models import Registry
+
+
+@dataclass
+class DiffEntry:
+    id: str
+    kind: str    # "added" | "removed" | "changed"
+    family: str
+    label: str = ""
+    change: str = ""
+
+
+@dataclass
+class DiffResult:
+    blob_a: str
+    blob_b: str
+    repo_a: str
+    repo_b: str
+    entries: list[DiffEntry] = field(default_factory=list)
+
+    @property
+    def added(self) -> list[DiffEntry]:
+        return [e for e in self.entries if e.kind == "added"]
+
+    @property
+    def removed(self) -> list[DiffEntry]:
+        return [e for e in self.entries if e.kind == "removed"]
+
+    @property
+    def changed(self) -> list[DiffEntry]:
+        return [e for e in self.entries if e.kind == "changed"]
 
 
 def diff_registries(
@@ -11,13 +43,14 @@ def diff_registries(
     *,
     blob_a: str = "",
     blob_b: str = "",
-) -> str:
-    """Return a human-readable diff between two Registry objects."""
-    lines: list[str] = []
-    header_a = f"--- {blob_a or 'registry-a'}  (repo:{a.repo_id})" if blob_a else f"--- registry-a  (repo:{a.repo_id})"
-    header_b = f"+++ {blob_b or 'registry-b'}  (repo:{b.repo_id})" if blob_b else f"+++ registry-b  (repo:{b.repo_id})"
-    lines.append(header_a)
-    lines.append(header_b)
+) -> DiffResult:
+    """Return a structured diff between two Registry objects."""
+    result = DiffResult(
+        blob_a=blob_a,
+        blob_b=blob_b,
+        repo_a=a.repo_id,
+        repo_b=b.repo_id,
+    )
 
     families: list[tuple[str, list, list]] = [
         ("features", list(a.features), list(b.features)),
@@ -27,41 +60,61 @@ def diff_registries(
         ("releases", list(a.releases), list(b.releases)),
     ]
 
-    added = removed = changed = 0
-    family_blocks: list[str] = []
-
     for family_name, a_list, b_list in families:
         a_map = {e.id: e for e in a_list}
         b_map = {e.id: e for e in b_list}
 
-        block: list[str] = []
-
         for eid, entity in b_map.items():
             if eid not in a_map:
-                added += 1
-                label = _label(entity)
-                block.append(f"  + {eid}  {label}")
+                result.entries.append(DiffEntry(
+                    id=eid, kind="added", family=family_name,
+                    label=_label(entity),
+                ))
 
-        for eid, entity in a_map.items():
+        for eid in a_map:
             if eid not in b_map:
-                removed += 1
-                block.append(f"  - {eid}")
+                result.entries.append(DiffEntry(
+                    id=eid, kind="removed", family=family_name,
+                ))
 
         for eid in a_map:
             if eid in b_map:
-                old = a_map[eid]
-                new = b_map[eid]
-                change = _entity_change(old, new)
+                change = _entity_change(a_map[eid], b_map[eid])
                 if change:
-                    changed += 1
-                    block.append(f"  ~ {eid}  {change}")
+                    result.entries.append(DiffEntry(
+                        id=eid, kind="changed", family=family_name,
+                        change=change,
+                    ))
 
+    return result
+
+
+def format_diff(result: DiffResult) -> str:
+    """Render a DiffResult as a human-readable string (same format as before)."""
+    blob_a = result.blob_a or "registry-a"
+    blob_b = result.blob_b or "registry-b"
+    lines = [
+        f"--- {blob_a}  (repo:{result.repo_a})",
+        f"+++ {blob_b}  (repo:{result.repo_b})",
+    ]
+
+    families_order = ["features", "claims", "tests", "evidence", "releases"]
+    for family_name in families_order:
+        block = [e for e in result.entries if e.family == family_name]
         n = len(block)
         noun = "change" if n == 1 else "changes"
-        family_blocks.append(f"\n{family_name} ({n} {noun})")
-        family_blocks.extend(block)
+        lines.append(f"\n{family_name} ({n} {noun})")
+        for e in block:
+            if e.kind == "added":
+                lines.append(f"  + {e.id}  {e.label}")
+            elif e.kind == "removed":
+                lines.append(f"  - {e.id}")
+            elif e.kind == "changed":
+                lines.append(f"  ~ {e.id}  {e.change}")
 
-    lines.extend(family_blocks)
+    added = len(result.added)
+    removed = len(result.removed)
+    changed = len(result.changed)
 
     if added == removed == changed == 0:
         lines.append("\nNo changes.")

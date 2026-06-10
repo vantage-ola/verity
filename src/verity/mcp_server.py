@@ -322,7 +322,7 @@ def verity_diff(blob_a: str, blob_b: str) -> str:
     """Show what changed between two Walrus blob snapshots of a proof chain. Requires WALRUS_AGGREGATOR_URL env var."""
     import json
 
-    from verity.diff import diff_registries
+    from verity.diff import diff_registries, format_diff
     from verity.models import Registry
 
     try:
@@ -334,7 +334,7 @@ def verity_diff(blob_a: str, blob_b: str) -> str:
         content_b = backend.fetch(blob_b)
         reg_a = Registry.model_validate(json.loads(content_a))
         reg_b = Registry.model_validate(json.loads(content_b))
-        return diff_registries(reg_a, reg_b, blob_a=blob_a, blob_b=blob_b)
+        return format_diff(diff_registries(reg_a, reg_b, blob_a=blob_a, blob_b=blob_b))
     except Exception as e:
         return f"Error: {e}"
 
