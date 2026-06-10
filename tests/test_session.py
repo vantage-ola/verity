@@ -213,3 +213,33 @@ def test_context_survives_round_trip(tmp_session: VeritySession) -> None:
     reg = tmp_session.registry()
     assert len(reg.context) == 2
     assert reg.context[1].key == "stack"
+
+
+# ---------------------------------------------------------------------------
+# status literal validation
+# ---------------------------------------------------------------------------
+
+def test_add_feature_bad_status(tmp_session: VeritySession) -> None:
+    with pytest.raises(ValueError, match="feature status"):
+        tmp_session.add_feature("feat:x", "X", status="verifed")
+
+
+def test_add_claim_bad_status(tmp_session: VeritySession) -> None:
+    tmp_session.add_feature("feat:x", "X")
+    with pytest.raises(ValueError, match="claim status"):
+        tmp_session.add_claim("clm:x.t1", "X", feature_id="feat:x", status="verifed")
+
+
+def test_add_test_bad_status(tmp_session: VeritySession) -> None:
+    tmp_session.add_feature("feat:x", "X")
+    tmp_session.add_claim("clm:x.t1", "X", feature_id="feat:x")
+    with pytest.raises(ValueError, match="test status"):
+        tmp_session.add_test("tst:x.unit", claim_id="clm:x.t1", status="passin")
+
+
+def test_add_evidence_bad_status(tmp_session: VeritySession) -> None:
+    tmp_session.add_feature("feat:x", "X")
+    tmp_session.add_claim("clm:x.t1", "X", feature_id="feat:x")
+    tmp_session.add_test("tst:x.unit", claim_id="clm:x.t1")
+    with pytest.raises(ValueError, match="evidence status"):
+        tmp_session.add_evidence("evd:x.ci", test_id="tst:x.unit", artifact_path="a.json", status="passd")

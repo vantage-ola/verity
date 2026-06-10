@@ -21,9 +21,20 @@ from pathlib import Path
 
 from verity.backends import StorageBackend
 from verity.models import Claim, ContextEntry, Evidence, Feature, PushRecord, Registry, Release, Test
-from verity.registry import canonical_json, load_registry, registry_path, save_registry
-from verity.release import VerityReleaseError, create_release
+from verity.registry import canonical_json, load_registry, save_registry
+from verity.release import  create_release
 from verity.validate import validate
+
+
+_FEATURE_STATUSES = {"active", "deprecated", "retired"}
+_CLAIM_STATUSES = {"open", "verified", "rejected"}
+_TEST_STATUSES = {"pending", "passing", "failing"}
+_EVIDENCE_STATUSES = {"collected", "passed", "failed"}
+
+
+def _check(value: str, allowed: set[str], label: str) -> None:
+    if value not in allowed:
+        raise ValueError(f"Invalid {label}: {value!r}. Must be one of {sorted(allowed)}")
 
 
 class VeritySession:
@@ -65,6 +76,7 @@ class VeritySession:
     # --- entity mutations ---
 
     def add_feature(self, id: str, title: str, status: str = "active") -> Feature:
+        _check(status, _FEATURE_STATUSES, "feature status")
         registry = self._load()
         feature = Feature(id=id, title=title, status=status)  # type: ignore[arg-type]
         registry.features.append(feature)
@@ -80,6 +92,7 @@ class VeritySession:
         tier: str = "T1",
         status: str = "open",
     ) -> Claim:
+        _check(status, _CLAIM_STATUSES, "claim status")
         registry = self._load()
         claim = Claim(id=id, feature_id=feature_id, title=title, tier=tier, status=status)  # type: ignore[arg-type]
         registry.claims.append(claim)
@@ -95,6 +108,7 @@ class VeritySession:
         path: str = "",
         status: str = "pending",
     ) -> Test:
+        _check(status, _TEST_STATUSES, "test status")
         registry = self._load()
         test = Test(id=id, claim_id=claim_id, kind=kind, path=path, status=status)  # type: ignore[arg-type]
         registry.tests.append(test)
@@ -110,6 +124,7 @@ class VeritySession:
         kind: str = "test_run",
         status: str = "collected",
     ) -> Evidence:
+        _check(status, _EVIDENCE_STATUSES, "evidence status")
         registry = self._load()
         evd = Evidence(id=id, test_id=test_id, kind=kind, artifact_path=artifact_path, status=status)  # type: ignore[arg-type]
         registry.evidence.append(evd)
