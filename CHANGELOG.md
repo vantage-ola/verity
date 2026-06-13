@@ -11,6 +11,13 @@ This project uses [semantic versioning](https://semver.org/).
 
 ---
 
+## [0.3.13] — 2026-06-13
+
+### Added
+- **`walrus-verity[all]`** — new meta-extra that installs all optional dependencies (`memwal`, `mcp`, `cryptography`) in one shot: `uv tool install "walrus-verity[all]"`
+
+---
+
 ## [0.3.12] — 2026-06-13
 
 ### Fixed

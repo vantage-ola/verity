@@ -1,0 +1,6 @@
+-- Remaining Items --
+1. CLI status validation in add_* commands (match Session._check pattern)
+2. Schema migration system (migrate.py + registry.py load hooks)
+3. Blob epoch renewal (WalrusBackend.renew + verity renew CLI command)
+4. Async support (WalrusBackend astore/afetch + async MCP tools)
+5. MCP structured errors (VerityMCPError + let exceptions propagate naturally)
