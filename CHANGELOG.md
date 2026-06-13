@@ -11,6 +11,13 @@ This project uses [semantic versioning](https://semver.org/).
 
 ---
 
+## [0.3.12] — 2026-06-13
+
+### Fixed
+- **Lazy signing import** — `verity.signing` is now imported lazily in `__init__.py`; users without `walrus-verity[sign]` installed no longer get an `ImportError` on every command
+
+---
+
 ## [0.3.11] — 2026-06-10
 
 ### Added
