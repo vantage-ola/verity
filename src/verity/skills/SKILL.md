@@ -67,7 +67,7 @@ verity recall "what was the latest release"
 verity recall "architecture of this project"
 verity recall "what features have we built" --namespace my-project
 
-# Sign and verify blobs (requires pip install "walrus-verity[sign]")
+# Sign and verify blobs (included in walrus-verity[all] or pip install "walrus-verity[sign]")
 verity keygen --key ~/.verity/signing.key       # generate Ed25519 keypair
 verity sign --key ~/.verity/signing.key         # sign latest push, embed sig in verity.json
 verity push                                      # re-publish with signature
@@ -135,8 +135,8 @@ for entry in v.log():
 
 | Backend | Install | Use |
 |---|---|---|
-| `WalrusBackend` | `pip install walrus-verity` | Pushes to Walrus testnet/mainnet |
-| `MemWalBackend` | `pip install "walrus-verity[memwal]"` | Walrus + MemWal semantic pointer |
+| `WalrusBackend` | `uv tool install "walrus-verity[all]"` | Pushes to Walrus testnet/mainnet |
+| `MemWalBackend` | included in `[all]` or `walrus-verity[memwal]` | Walrus + MemWal semantic pointer |
 | In-memory (test) | built-in | Pass a `_SharedStore` instance |
 
 **MemWal**: `push(backend=MemWalBackend())` stores the blob on Walrus **and** registers semantic memories in MemWal (features summary, verified claims, latest release, context entries). Use `backend.recall(query)` or `verity recall "<query>"` to query them in natural language.
@@ -145,7 +145,7 @@ for entry in v.log():
 
 ## MCP server
 
-Install: `pip install "walrus-verity[mcp]"` then run `verity-mcp`.
+Install: `uv tool install "walrus-verity[all]"` (or `pip install "walrus-verity[mcp]"`) then run `verity-mcp`.
 
 | Tool | Description |
 |---|---|

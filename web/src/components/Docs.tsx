@@ -72,9 +72,9 @@ function QuickStart() {
       <P>Install verity, build a proof chain, push it to Walrus in under five minutes.</P>
 
       <H2>Install</H2>
-      <Code>pip install walrus-verity</Code>
-      <P>For MemWal semantic discovery, add the optional extra:</P>
-      <Code>pip install "walrus-verity[memwal]"</Code>
+      <Code>uv tool install "walrus-verity[all]"</Code>
+      <P>The <InlineCode>[all]</InlineCode> extra includes signing, MemWal, and MCP support. Or use pip:</P>
+      <Code>pip install "walrus-verity[all]"</Code>
 
       <H2>Initialise</H2>
       <Code>
@@ -360,7 +360,7 @@ function CliRef() {
       <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 16px' }}>SARIF level: <InlineCode>verified</InlineCode> → <InlineCode>none</InlineCode> (pass), <InlineCode>open</InlineCode> → <InlineCode>warning</InlineCode>, <InlineCode>rejected</InlineCode> → <InlineCode>error</InlineCode>. JUnit: evidence <InlineCode>passed</InlineCode> → pass; <InlineCode>failed</InlineCode> → <code>&lt;failure&gt;</code>; no evidence → <code>&lt;skipped&gt;</code>.</p>
 
       <H2>verity keygen</H2>
-      <P>Generate an Ed25519 signing keypair. Requires <InlineCode>pip install "walrus-verity[sign]"</InlineCode>.</P>
+      <P>Generate an Ed25519 signing keypair. Included in <InlineCode>walrus-verity[all]</InlineCode> or install separately with <InlineCode>walrus-verity[sign]</InlineCode>.</P>
       <Code>
         verity keygen [<span className="c-flag">--key</span> PATH] [<span className="c-flag">--pubkey</span> PATH] [<span className="c-flag">--force</span>]{'\n\n'}
         <span className="c-prompt">$ </span>verity keygen{'\n'}
@@ -424,7 +424,7 @@ function CliRef() {
       <H2>MCP server</H2>
       <P>Expose all verity tools natively to any MCP-compatible editor (Claude Code, Cursor, Windsurf, Codex). No subprocess; the editor calls the tools directly.</P>
       <Code>
-        <span className="c-comm"># install with MCP support</span>{'\n'}
+        <span className="c-comm"># included in walrus-verity[all], or install separately</span>{'\n'}
         pip install <span className="c-str">"walrus-verity[mcp]"</span>{'\n\n'}
         <span className="c-comm"># add to claude_mcp_config.json (or equivalent)</span>{'\n'}
         {'{\n'}
@@ -573,6 +573,8 @@ function MemWalDoc() {
       <P>MemWal is a Walrus-backed memory layer for AI agents. verity uses it as a <em>discovery layer</em> on top of Walrus. Blobs live on Walrus directly; MemWal registers semantic pointers so agents can find them later.</P>
 
       <H2>Install</H2>
+      <Code>uv tool install "walrus-verity[all]"</Code>
+      <P>MemWal is included in <InlineCode>[all]</InlineCode>. Or install just this extra:</P>
       <Code>pip install "walrus-verity[memwal]"</Code>
 
       <H2>Configure</H2>

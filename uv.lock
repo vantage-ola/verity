@@ -1023,6 +1023,11 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+all = [
+    { name = "cryptography" },
+    { name = "mcp" },
+    { name = "memwal" },
+]
 dev = [
     { name = "cryptography" },
     { name = "mcp" },
@@ -1047,11 +1052,14 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "cryptography", marker = "extra == 'all'", specifier = ">=42.0" },
     { name = "cryptography", marker = "extra == 'dev'", specifier = ">=42.0" },
     { name = "cryptography", marker = "extra == 'sign'", specifier = ">=42.0" },
     { name = "httpx", specifier = ">=0.27" },
+    { name = "mcp", marker = "extra == 'all'", specifier = ">=1.27.1" },
     { name = "mcp", marker = "extra == 'dev'", specifier = ">=1.0" },
     { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.27.1" },
+    { name = "memwal", marker = "extra == 'all'", specifier = ">=0.1.0" },
     { name = "memwal", marker = "extra == 'dev'", specifier = ">=0.1.0" },
     { name = "memwal", marker = "extra == 'memwal'", specifier = ">=0.1.0" },
     { name = "pydantic", specifier = ">=2.0" },
@@ -1060,7 +1068,7 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.0" },
     { name = "typer", specifier = ">=0.12" },
 ]
-provides-extras = ["memwal", "dev", "mcp", "sign"]
+provides-extras = ["memwal", "dev", "mcp", "sign", "all"]
 
 [package.metadata.requires-dev]
 dev = [{ name = "cryptography", specifier = ">=48.0.0" }]

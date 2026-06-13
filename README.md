@@ -35,13 +35,16 @@ Built for the **Sui Overflow hackathon, Walrus track**.
 ## Install
 
 ```bash
-pip install walrus-verity
+# Full install — everything included
+uv tool install "walrus-verity[all]"
 
-# With MemWal semantic recall
-pip install "walrus-verity[memwal]"
+# Or with pip
+pip install "walrus-verity[all]"
 
-# With Ed25519 signing support
-pip install "walrus-verity[sign]"
+# Individual extras
+pip install "walrus-verity[memwal]"   # MemWal semantic recall
+pip install "walrus-verity[sign]"     # Ed25519 signing
+pip install "walrus-verity[mcp]"      # MCP server
 ```
 
 ---
