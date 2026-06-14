@@ -11,6 +11,13 @@ This project uses [semantic versioning](https://semver.org/).
 
 ---
 
+## [0.3.14] — 2026-06-14
+
+### Fixed
+- **`.env` loading in CLI** — `verity push --backend memwal` now reliably picks up `.env` from the current working directory; the CLI explicitly loads `$CWD/.env` first, then falls back to `find_dotenv(usecwd=True)` for parent-dir search
+
+---
+
 ## [0.3.13] — 2026-06-13
 
 ### Added
