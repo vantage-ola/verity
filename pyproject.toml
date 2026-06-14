@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "walrus-verity"
 version = "0.3.14"
-description = "Proof-chain registry for AI agents — backed by Walrus for persistent, portable, verifiable memory"
+description = "Proof-chain registry for AI agents. Records features, claims, tests, and evidence, then publishes each chain to Walrus as an immutable blob ID."
 readme = "README.md"
 license = { text = "MIT" }
 authors = [{ name = "vantage-ola" }]

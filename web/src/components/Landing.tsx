@@ -253,7 +253,7 @@ export function Landing({ onDocs }: { onDocs: () => void }) {
             Pull by blob ID from any agent, any session.
           </p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-            <CopyChip text="pip install walrus-verity" />
+            <CopyChip text='uv tool install "walrus-verity[all]"' />
             <button onClick={onDocs} className="v-btn v-btn-ghost" style={{ color: 'var(--text)' }}>
               Read the docs →
             </button>
@@ -309,7 +309,7 @@ export function Landing({ onDocs }: { onDocs: () => void }) {
             <UseCase
               num="B"
               title="Autonomous monitoring"
-              body="Every push is a timestamped, immutable snapshot. Supervisors fetch by blob ID or query via the MemWal SDK — no polling, no scraping."
+              body="Every push is a timestamped, immutable snapshot. Supervisors fetch by blob ID or query via the MemWal SDK, with no polling or scraping."
               footer="immutable · timestamped"
             />
             <UseCase
@@ -370,8 +370,8 @@ export function Landing({ onDocs }: { onDocs: () => void }) {
               </p>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <CopyChip text="pip install walrus-verity" />
-              <CopyChip text='pip install "walrus-verity[memwal]"' />
+              <CopyChip text='uv tool install "walrus-verity[all]"' />
+              <CopyChip text='pip install "walrus-verity[all]"' />
             </div>
           </div>
         </div>

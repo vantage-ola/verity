@@ -239,7 +239,7 @@ function CliRef() {
       </Code>
 
       <H2>verity watch</H2>
-      <P>Daemon mode — polls the registry every N seconds, validates on each change, and optionally auto-pushes to Walrus. Never pushes when validation errors exist (fail-closed). Use Ctrl+C to stop.</P>
+      <P>Polls the registry every N seconds, validates on each change, and optionally auto-pushes to Walrus. It never pushes when validation errors exist. Stop it with Ctrl+C.</P>
       <Code>verity watch [<span className="c-flag">--interval</span> SECONDS] [<span className="c-flag">--auto-push</span>] [<span className="c-flag">--backend</span> walrus|memwal] [<span className="c-flag">--epochs</span> N]</Code>
       <Code>
         <span className="c-comm"># watch for changes, print on each update</span>{'\n'}
@@ -285,7 +285,7 @@ function CliRef() {
       </Code>
 
       <H2>verity context</H2>
-      <P>Manage named key/value context entries inside <InlineCode>verity.json</InlineCode>. Entries travel with the registry and are stored as MemWal memories on <InlineCode>verity push --backend memwal</InlineCode>.</P>
+      <P>Manage named key/value context entries inside <InlineCode>verity.json</InlineCode>. Entries are stored in the registry and pushed to MemWal on <InlineCode>verity push --backend memwal</InlineCode>.</P>
       <Code>
         verity context set KEY VALUE{'\n'}
         verity context list{'\n'}
@@ -315,10 +315,10 @@ function CliRef() {
         <span className="c-prompt">$ </span>verity recall <span className="c-str">"architecture of this project"</span> <span className="c-flag">--namespace</span> my-project{'\n'}
         <span className="c-out">5-layer proof chain: feature → claim → test → evidence → release</span>
       </Code>
-      <P>What gets indexed on each <InlineCode>verity push --backend memwal</InlineCode>: a registry blob pointer, all feature titles and statuses, all verified claim titles, the latest release version, and any context entries set via <InlineCode>verity context set</InlineCode>. All writes are non-fatal — if the MemWal relayer is unreachable the blob is still safely on Walrus.</P>
+      <P>Each <InlineCode>verity push --backend memwal</InlineCode> indexes: a registry blob pointer, all feature titles and statuses, all verified claim titles, the latest release version, and any context entries set via <InlineCode>verity context set</InlineCode>. MemWal writes are non-fatal. If the relayer is unreachable, the blob is still on Walrus.</P>
 
       <H2>verity diff</H2>
-      <P>Fetch two proof-chain snapshots from Walrus by blob ID and show a structured diff — entities added, removed, or changed (with status transitions like <InlineCode>open → verified</InlineCode>).</P>
+      <P>Fetch two proof-chain snapshots from Walrus by blob ID and show a structured diff of entities added, removed, or changed, including status transitions like <InlineCode>open → verified</InlineCode>.</P>
       <Code>verity diff BLOB_A BLOB_B [<span className="c-flag">--backend</span> walrus|memwal]</Code>
       <Code>
         <span className="c-prompt">$ </span>verity diff <span className="c-id">AbCdEfGh…</span> <span className="c-id">XyZaBcDe…</span>{'\n'}

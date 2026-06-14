@@ -2,7 +2,7 @@
 
 **How do you trust what an AI agent built?**
 
-verity is a proof-chain registry for AI agents — record what was built, what was claimed, what tests ran, and what they proved. Every chain is published to [Walrus](https://docs.walrus.site) as an immutable blob. Any agent, on any machine, can pull it back and verify it.
+verity is a proof-chain registry for AI agents. It records what was built, what was claimed, what tests ran, and what they proved. Every chain is published to [Walrus](https://docs.walrus.site) as an immutable blob. Any agent, on any machine, can pull it back and verify it.
 
 [![CI](https://github.com/vantage-ola/verity/actions/workflows/ci.yml/badge.svg)](https://github.com/vantage-ola/verity/actions/workflows/ci.yml)
 [![Coverage](https://codecov.io/gh/vantage-ola/verity/branch/main/graph/badge.svg)](https://codecov.io/gh/vantage-ola/verity)
