@@ -199,7 +199,7 @@ verity watch --auto-push --backend memwal
 
 ## Documentation
 
-Full documentation is available at the [verity web app](https://vantage-ola.github.io/verity/) — CLI reference, MCP server, Python API, schema, Walrus/MemWal setup, and multi-agent patterns.
+Full documentation is available at [here](https://verity-web-one.vercel.app/) — CLI reference, MCP server, Python API, schema, Walrus/MemWal setup, and multi-agent patterns.
 
 ---
 
