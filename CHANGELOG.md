@@ -11,6 +11,13 @@ This project uses [semantic versioning](https://semver.org/).
 
 ---
 
+## [0.3.15] — 2026-06-30
+
+### Changed
+- Updated documentation link in README
+
+---
+
 ## [0.3.14] — 2026-06-14
 
 ### Fixed
